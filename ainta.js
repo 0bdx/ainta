@@ -7,7 +7,7 @@
 /**
  * ### A plain object containing optional configuration for `aintaType()`.
  *
- * @typedef {Object} AintaOptions
+ * @typedef {Object} AintaTypeOptions
  * @property {string} [begin]
  *     Optional text to begin the result with, eg a function name like "isOk()".
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
@@ -26,7 +26,7 @@
  *     The value to validate.
  * @param {string} [identifier]
  *     Optional name to call `value` in the result, if invalid.
- * @param {AintaOptions} [options={}]
+ * @param {AintaTypeOptions} [options={}]
  *     Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *     Returns `false` if `value` is valid, or an explanation if invalid.
@@ -71,9 +71,37 @@ function aintaType(
 const isRecognisedType = type => ['bigint','boolean','function','number',
     'object','string','symbol','undefined'].indexOf(type) !== -1;
 
-const sanitiseString = str => {
-    if (str.length <= 32) return encodeURI(str);
-    return encodeURI(`${str.slice(0, 21)}...${str.slice(-8)}`);
-};
+const sanitiseString = str =>
+    encodeURI(str.length <= 32 ? str
+        : `${str.slice(0, 21)}...${str.slice(-8)}`);
 
-export { aintaType };
+/**
+ * ### A plain object containing optional configuration for `aintaBoolean()`.
+ *
+ * @typedef {Object} AintaBooleanOptions
+ * @property {string} [begin]
+ *     Optional text to begin the result with, eg a function name like "isOk()".
+ */
+
+/**
+ * ### Validates a boolean.
+ *
+ * @param {any} value
+ *     The value to validate.
+ * @param {string} [identifier]
+ *     Optional name to call `value` in the result, if invalid.
+ * @param {AintaBooleanOptions} [options={}]
+ *     Optional plain object containing optional configuration (default is `{}`)
+ * @returns {false|string}
+ *     Returns `false` if `value` is valid, or an explanation if invalid.
+ */
+function aintaBoolean(
+    value,
+    identifier,
+    options = {},
+) {
+    // Use aintaType() to check whether `value` is a boolean.
+    return aintaType(value, identifier, { ...options, type:'boolean' });
+}
+
+export { aintaBoolean, aintaType };

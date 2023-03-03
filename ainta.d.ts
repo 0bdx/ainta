@@ -1,7 +1,7 @@
 /**
  * ### A plain object containing optional configuration for `aintaType()`.
  */
-export type AintaOptions = {
+export type AintaTypeOptions = {
     /**
      * Optional text to begin the result with, eg a function name like "isOk()".
      */
@@ -12,6 +12,35 @@ export type AintaOptions = {
     type?: 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
 };
 /**
+ * ### A plain object containing optional configuration for `aintaBoolean()`.
+ */
+export type AintaBooleanOptions = {
+    /**
+     * Optional text to begin the result with, eg a function name like "isOk()".
+     */
+    begin?: string;
+};
+/**
+ * ### A plain object containing optional configuration for `aintaBoolean()`.
+ *
+ * @typedef {Object} AintaBooleanOptions
+ * @property {string} [begin]
+ *     Optional text to begin the result with, eg a function name like "isOk()".
+ */
+/**
+ * ### Validates a boolean.
+ *
+ * @param {any} value
+ *     The value to validate.
+ * @param {string} [identifier]
+ *     Optional name to call `value` in the result, if invalid.
+ * @param {AintaBooleanOptions} [options={}]
+ *     Optional plain object containing optional configuration (default is `{}`)
+ * @returns {false|string}
+ *     Returns `false` if `value` is valid, or an explanation if invalid.
+ */
+export function aintaBoolean(value: any, identifier?: string, options?: AintaBooleanOptions): false | string;
+/**
  * https://www.npmjs.com/package/@0bdx/ainta
  * @version 0.0.1
  * @license Copyright (c) 2023 0bdx <0@0bdx.com> (0bdx.com)
@@ -20,7 +49,7 @@ export type AintaOptions = {
 /**
  * ### A plain object containing optional configuration for `aintaType()`.
  *
- * @typedef {Object} AintaOptions
+ * @typedef {Object} AintaTypeOptions
  * @property {string} [begin]
  *     Optional text to begin the result with, eg a function name like "isOk()".
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
@@ -38,9 +67,9 @@ export type AintaOptions = {
  *     The value to validate.
  * @param {string} [identifier]
  *     Optional name to call `value` in the result, if invalid.
- * @param {AintaOptions} [options={}]
+ * @param {AintaTypeOptions} [options={}]
  *     Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *     Returns `false` if `value` is valid, or an explanation if invalid.
  */
-export function aintaType(value: any, identifier?: string, options?: AintaOptions): false | string;
+export function aintaType(value: any, identifier?: string, options?: AintaTypeOptions): false | string;

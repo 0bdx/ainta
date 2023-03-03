@@ -1,7 +1,7 @@
 /**
  * ### A plain object containing optional configuration for `aintaType()`.
  *
- * @typedef {Object} AintaOptions
+ * @typedef {Object} AintaTypeOptions
  * @property {string} [begin]
  *     Optional text to begin the result with, eg a function name like "isOk()".
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
@@ -20,7 +20,7 @@
  *     The value to validate.
  * @param {string} [identifier]
  *     Optional name to call `value` in the result, if invalid.
- * @param {AintaOptions} [options={}]
+ * @param {AintaTypeOptions} [options={}]
  *     Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *     Returns `false` if `value` is valid, or an explanation if invalid.
@@ -65,10 +65,9 @@ export default function aintaType(
 const isRecognisedType = type => ['bigint','boolean','function','number',
     'object','string','symbol','undefined'].indexOf(type) !== -1;
 
-const sanitiseString = str => {
-    if (str.length <= 32) return encodeURI(str);
-    return encodeURI(`${str.slice(0, 21)}...${str.slice(-8)}`);
-}
+const sanitiseString = str =>
+    encodeURI(str.length <= 32 ? str
+        : `${str.slice(0, 21)}...${str.slice(-8)}`)
 
 /**
  * aintaType() unit tests.
@@ -83,6 +82,9 @@ const sanitiseString = str => {
 export function aintaTypeTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+
+    // Invalid `options.begin` is a TS error, but does not prevent normal use.
+    // @TODO
 
     // Undefined `options.type` produces a helpful result.
     equal(f(),
@@ -119,6 +121,14 @@ export function aintaTypeTest(f) {
     // @ts-expect-error
     equal(f({}, 'o', { type:'\\potentially\\$"insecure";and also `\'too long\'`' }),
         "`o` cannot be validated, `options.type` '%5Cpotentially%5C$%22insecu...o%20long'%60' not known");
+
+    // Extra `options` values cause TS errors, but do not prevent normal use.
+    // @ts-expect-error
+    equal(f(String(1), 'String(1)', { foo:'bar', type:'string' }),
+        false);
+    // @ts-expect-error
+    equal(f(null, 'NULL', { type:'boolean', zub:123 }),
+        "`NULL` is null not type 'boolean'");
 
     // options.type is 'bigint'.
     equal(f(BigInt(123), 'hugeNum', { begin:'BigInt Test', type:'bigint' }),
@@ -230,5 +240,4 @@ export function aintaTypeTest(f) {
     // @ts-expect-error
     equal(f(Math, 0, { begin:'Undefined Test', type:'undefined' }),
         "Undefined Test: A value is type 'object' not 'undefined'");
-
 }
