@@ -4,6 +4,9 @@
 export type Ainta = (arg0: any, arg1: string | null, arg2: any | null) => string | false;
 /**
  * ### A plain object containing optional configuration for `ainta` functions.
+ *
+ * Exporting a plain `{}` is really a way to export the DefaultOptions type, and
+ * avoid "File '.../ainta/src/default-options.js' is not a module.ts (2306)".
  */
 export type DefaultOptions = {
     /**

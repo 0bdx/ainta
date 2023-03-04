@@ -36,17 +36,6 @@ export function aintaBooleanTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
 
-    // Invalid `options.begin` is a TS error, but does not prevent normal use.
-    // @TODO
-
-    // Invalid `options.type` is a TS error, but does not prevent normal use.
-    // @TODO
-
-    // Extra `options` values cause TS errors, but do not prevent normal use.
-    // @ts-expect-error
-    equal(f(Boolean(1), 'Boolean(1)', { begin:'Boolean Test', foo:'bar' }),
-        false);
-
     // Typical usage.
     equal(f(true),
         false);
@@ -67,7 +56,33 @@ export function aintaBooleanTest(f) {
     equal(f('true', void 0, { type:'boolean' }),
         "A value is type 'string' not 'boolean'");
 
-    // equal(f('true', void 0, { type:'number' }),
-    //     "A value is type 'string' not 'boolean'");
-    // @TODO
+    // Extra `options` values cause TS errors, but do not prevent normal use.
+    // @ts-expect-error
+    equal(f(Boolean(1), 'Boolean(1)', { begin:'Boolean Test', foo:'bar' }),
+        false);
+    // @ts-expect-error
+    equal(f(BigInt(1), 'BigInt(1)', { begin:'Boolean Test', foo:'bar' }),
+        "Boolean Test: `BigInt(1)` is type 'bigint' not 'boolean'");
+
+    // Invalid `options.begin` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(true, 'yes', { begin:['a','b','c'] }),
+        false);
+    // @ts-expect-error
+    equal(f(NaN, 'num', { begin:['a','b','c'] }),
+        "a,b,c: `num` is type 'number' not 'boolean'");
+
+    // Invalid `options.type` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(false, 'no', { type:String }),
+        false);
+    // @ts-expect-error
+    equal(f([], 'obj', { type:String }),
+        "`obj` is an array not type 'boolean'");
+
+    // In fact, `options.type` is ignored, even if it's a valid type.
+    equal(f(Boolean(0), 'Boolean(0)', { type:'number' }),
+        false);
+    equal(f(99.999, 'Nearly one hundred', { type:'number' }),
+        "`Nearly one hundred` is type 'number' not 'boolean'");
 }

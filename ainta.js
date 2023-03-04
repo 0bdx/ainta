@@ -6,6 +6,9 @@
  */
 /**
  * ### A plain object containing optional configuration for `ainta` functions.
+ * 
+ * Exporting a plain `{}` is really a way to export the DefaultOptions type, and
+ * avoid "File '.../ainta/src/default-options.js' is not a module.ts (2306)".
  *
  * @typedef {Object} DefaultOptions
  * @property {string} [begin]

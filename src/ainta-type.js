@@ -75,9 +75,6 @@ export function aintaTypeTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
 
-    // Invalid `options.begin` is a TS error, but does not prevent normal use.
-    // @TODO
-
     // Undefined `options.type` produces a helpful result.
     equal(f(),
         "A value cannot be validated, `options.type` is not set");
@@ -232,4 +229,20 @@ export function aintaTypeTest(f) {
     // @ts-expect-error
     equal(f(Math, 0, { begin:'Undefined Test', type:'undefined' }),
         "Undefined Test: A value is type 'object' not 'undefined'");
+
+    // Extra `options` values cause TS errors, but do not prevent normal use.
+    // @ts-expect-error
+    equal(f(false, 'falsey boolean', { type:'boolean', unexpectedProperty:1 }),
+        false);
+    // @ts-expect-error
+    equal(f(null, 'other falsey', { type:'boolean', unexpectedProperty:1 }),
+        "`other falsey` is null not type 'boolean'");
+
+    // Invalid `options.begin` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(Symbol('ok'), void 0, { begin:true, type:'symbol' }),
+        false);
+    // @ts-expect-error
+    equal(f({}, void 0, { begin:true, type:'symbol' }),
+        "true: A value is type 'object' not 'symbol'");
 }
