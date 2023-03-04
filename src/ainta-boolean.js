@@ -4,14 +4,29 @@ import aintaType from './ainta-type.js';
 /**
  * ### Validates a boolean.
  *
+ * If the first argument passed to `aintaBoolean()` ain't a boolean, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaBoolean } from '@0bdx/ainta';
+ * 
+ * aintaBoolean(true);
+ * // false
+ *
+ * aintaBoolean(1234);
+ * // "A value is type 'number' not 'boolean'"
+ *
+ * aintaBoolean(null, 'isDone', { begin:'doThings()' });
+ * // "doThings(): `isDone` is null not type 'boolean'"
+ *
  * @param {any} value
  *    The value to validate.
  * @param {string} [identifier]
- *    Optional name to call `value` in the result, if invalid.
+ *    Optional name to call `value` in the explanation, if invalid.
  * @param {import('./options').Options} [options={}]
- *    Optional plain object containing optional configuration (default is `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if invalid.
+ *    Returns `false` if `value` is valid, or an explanation if not.
  */
 export default function aintaBoolean(
     value,

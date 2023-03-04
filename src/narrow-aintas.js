@@ -1,40 +1,53 @@
 import emptyOptions from './options.js';
 
-/** Any one of @0bdx/ainta's validation functions.
+/** Any one of `ainta`'s validation functions.
  * @typedef {function(any, string?, import('./options').Options?):string|false} Ainta */
 
 /**
- * ### Narrows multiple validation functions, and aggregates their results.
+ * ### Narrows any number of `ainta` functions, and aggregates their results.
+ *
+ * This helper:
+ * 1. Narrows (applies shared options to) multiple `ainta` functions
+ * 2. Aggregates the strings returned by those functions
+ *
+ * In the example below, `narrowAintas()` is used to narrow `aintaInteger()`
+ * into `naInteger()`, and then capture multiple validation results:
+ * - `begin:'bothNatural()'` sets a prefix, added to all explanations
+ * - `gte:0` checks that the value is not negative
+ * - `lte:1000` and `lte:50` specify different maximum values for each argument
+ * - `if (results.length)` checks whether there were any problems
  *
  * @example
- *     import narrowAintas, { aintaInteger } from '@0bdx/ainta';
+ * import narrowAintas, { aintaInteger } from '@0bdx/ainta';
  *
- *     function bothInts(a, b) {
- *         const [ results, naInteger ] = narrowAintas(
- *             { begin:'bothInts()', gte:0 }, aintaInteger);
- *         naInteger(a, 'a', { lte:1000 });
- *         naInteger(b, 'b', { lte:50 });
- *         if (results.length) return results;
- *         return "a and b are both integers, and both in range!";
- *     }
+ * function bothNatural(a, b) {
+ *     const [ results, naInteger ] = narrowAintas(
+ *         { begin:'bothNatural()', gte:0 },
+ *         aintaInteger
+ *     );
+ *     naInteger(a, 'a', { lte:1000 });
+ *     naInteger(b, 'b', { lte:50 });
+ *     if (results.length) return results;
+ *     return "a and b are both natural numbers, in range!";
+ * }
  *
- *     bothInts(1, 99);
- *     // [ "bothInts(): `b` is 99 which is greater than 50" ]
+ * bothNatural(-5, 0.25);
+ * // [ "bothNatural(): `a` is -5 not gte 0",
+ * //   "bothNatural(): `b` is 0.25 not an integer" ]
  *
- *     bothInts(0.25);
- *     // [ "bothInts(): `a` is 0.25 not an integer",
- *     //   "bothInts(): `b` is type 'undefined' not 'number'" ]
+ * bothNatural(44, 200);
+ * // [ "bothNatural(): `b` is 200 not lte 50" ]
  *
- *     bothInts(12, 3);
- *     // "a and b are both integers, and both in range!"
+ * bothNatural(12, 3);
+ * // "a and b are both natural numbers, in range!"
  *
  * @param {import('./options').Options} [options={}]
- *    Optional plain object containing optional configuration (default is `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @param {...Ainta} aintas
- *    Any number of functions, to apply `options` to.
+ *    Any number of `ainta` functions, to apply `options` to.
  * @returns {[string[], ...Ainta[]]}
- *    The first item of the returned array is `results`. The remaining items
- *    are the passed-in functions, with `options` applied to them.
+ *    The first item of the returned array will contain aggregated results. The
+ *    remaining items are the passed-in functions, with `options` applied.
  */
 export default function narrowAintas(
     options = emptyOptions,
@@ -52,7 +65,8 @@ export default function narrowAintas(
 }
 
 /**
- * ### Narrows a single validation function.
+ * Narrows a single validation function.
+ * @private
  *
  * @param {import('./options').Options} options
  *    Optional plain object containing optional configuration (default is `{}`)

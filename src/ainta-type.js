@@ -2,20 +2,33 @@ import emptyOptions from './options.js';
 
 /**
  * ### Validates a value using JavaScript's native `typeof`.
- * 
+ *
+ * If the `typeof` the first argument passed to `aintaType()` ain't
+ * `option.type`, it returns a short explanation of what went wrong. Otherwise
+ * it returns `false`.
+ *
  * Due to the way `typeof` works, these are all valid, so return `false`:
  * - `aintaType(null, { type:'object' })`
  * - `aintaType([99], { type:'object' })`
  * - `aintaType(NaN, { type:'number' })`
  *
+ * @example
+ * import { aintaType } from '@0bdx/ainta';
+ * 
+ * aintaType(0.5, 'half', { type:'number' });
+ * // false
+ *
+ * aintaType(n => n / 2, 'half', { type:'number' });
+ * // "`half` is type 'function' not 'number'"
+ *
  * @param {any} value
  *    The value to validate.
  * @param {string} [identifier]
- *    Optional name to call `value` in the result, if invalid.
+ *    Optional name to call `value` in the explanation, if invalid.
  * @param {import('./options').Options} [options={}]
- *    Optional plain object containing optional configuration (default is `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if invalid.
+ *    Returns `false` if `value` is valid, or an explanation if not.
  */
 export default function aintaType(
     value,
@@ -172,6 +185,10 @@ export function aintaTypeTest(f) {
         false);
     equal(f(-Infinity, 'minusInfinity', { begin:'Number Test', type:'number' }),
         false);
+    equal(f(function (n) { return n / 2 }, 'half', { type:'number' }),
+        "`half` is type 'function' not 'number'");
+    equal(f(n => n / 2, 'half', { begin:'arrow fn', type:'number' }),
+        "arrow fn: `half` is type 'function' not 'number'");
     equal(f(null, undefined, { type:'number' }),
         "A value is null not type 'number'");
     equal(f([[],1,true], 'allsorts', { type:'number' }),

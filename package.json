@@ -25,7 +25,8 @@
     "url": "git+https://github.com/0bdx/ainta.git"
   },
   "keywords": [
-    "validate"
+    "validate",
+    "validation"
   ],
   "author": "0bdx <0@0bdx.com> (0bdx.com)",
   "license": "MIT",

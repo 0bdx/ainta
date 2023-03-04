@@ -16,17 +16,14 @@ Utilities for validating values in 0bdx apps, libraries and websites.
 ```js
 import { aintaBoolean } from '@0bdx/ainta';
 
-aintaBoolean(1234); // "A value is type 'number' not 'boolean'"
-aintaBoolean(true); // false
+aintaBoolean(true);
+// false
 
-function isBool(arg) {
-    const result = aintaBoolean(arg, 'arg', { begin:'isBool()' });
-    if (result) return result;
-    return "It's a boolean!";
-}
+aintaBoolean(1234);
+// "A value is type 'number' not 'boolean'"
 
-isBool(12345); // "isBool(): `arg` is type 'number' not 'boolean'"
-isBool(false); // "It's a boolean!"
+aintaBoolean(null, 'isDone', { begin:'doThings()' });
+// "doThings(): `isDone` is null not type 'boolean'"
 ```
 
 ### Passing in the special `results` property:
@@ -45,22 +42,37 @@ isStrArr([8,9]); // [ "Item 0 of a value is type 'number' not 'string'" ]
 isStrArr(['a']); // "It's an array of strings, and there's no more than two!"
 ```
 
-### Typical usage of `narrowAintas()`:
+### Typical `narrowAintas()` usage:
+
+In the example below, `narrowAintas()` is used to narrow `aintaInteger()`
+into `naInteger()`, and then capture multiple validation results:
+
+- `begin:'bothNatural()'` sets a prefix, added to all explanations
+- `gte:0` checks that the value is not negative
+- `lte:1000` and `lte:50` specify different maximum values for each argument
+- `if (results.length)` checks whether there were any problems
 
 ```js
 import narrowAintas, { aintaInteger } from '@0bdx/ainta';
 
-function bothInts(a, b) {
+function bothNatural(a, b) {
     const [ results, naInteger ] = narrowAintas(
-        { begin:'bothInts()', gte:0 }, aintaInteger);
+        { begin:'bothNatural()', gte:0 },
+        aintaInteger
+    );
     naInteger(a, 'a', { lte:1000 });
     naInteger(b, 'b', { lte:50 });
     if (results.length) return results;
-    return "a and b are both integers, and both in range!";
+    return "a and b are both natural numbers, in range!";
 }
 
-bothInts(1,99); // [ "bothInts(): `b` is 99 which is greater than 50" ]
-bothInts(0.25); // [ "bothInts(): `a` is 0.25 not an integer",
-                //   "bothInts(): `b` is type 'undefined' not 'number'" ]
-bothInts(12,3); // "a and b are both integers, and both in range!"
+bothNatural(-5, 0.25);
+// [ "bothNatural(): `a` is -5 not gte 0",
+//   "bothNatural(): `b` is 0.25 not an integer" ]
+
+bothNatural(44, 200);
+// [ "bothNatural(): `b` is 200 not lte 50" ]
+
+bothNatural(12, 3);
+// "a and b are both natural numbers, in range!"
 ```
