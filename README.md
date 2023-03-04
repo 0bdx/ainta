@@ -16,6 +16,9 @@ Utilities for validating values in 0bdx apps, libraries and websites.
 ```js
 import { aintaBoolean } from '@0bdx/ainta';
 
+aintaBoolean(1234); // "A value is type 'number' not 'boolean'"
+aintaBoolean(true); // false
+
 function isBool(arg) {
     const result = aintaBoolean(arg, 'arg', { begin:'isBool()' });
     if (result) return result;
@@ -42,16 +45,16 @@ isStrArr([8,9]); // [ "Item 0 of a value is type 'number' not 'string'" ]
 isStrArr(['a']); // "It's an array of strings, and there's no more than two!"
 ```
 
-### Typical usage of `adjustAintas()`:
+### Typical usage of `narrowAintas()`:
 
 ```js
-import adjustAintas, { aintaInteger } from '@0bdx/ainta';
+import narrowAintas, { aintaInteger } from '@0bdx/ainta';
 
 function bothInts(a, b) {
-    const [ results, aaInteger ] =
-        adjustAintas({ begin:'bothInts()', gte:0 }, aintaInteger);
-    aaInteger(a, 'a', { lte:1000 });
-    aaInteger(b, 'b', { lte:50 });
+    const [ results, naInteger ] = narrowAintas(
+        { begin:'bothInts()', gte:0 }, aintaInteger);
+    naInteger(a, 'a', { lte:1000 });
+    naInteger(b, 'b', { lte:50 });
     if (results.length) return results;
     return "a and b are both integers, and both in range!";
 }

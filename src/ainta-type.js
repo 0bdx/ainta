@@ -1,12 +1,4 @@
-/**
- * ### A plain object containing optional configuration for `aintaType()`.
- *
- * @typedef {Object} AintaTypeOptions
- * @property {string} [begin]
- *     Optional text to begin the result with, eg a function name like "isOk()".
- * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
- *     Optional JavaScript type to expect, eg "boolean" or "undefined".
- */
+import defaultOptions from './default-options.js';
 
 /**
  * ### Validates a value using JavaScript's native `typeof`.
@@ -17,18 +9,18 @@
  * - `aintaType(NaN, { type:'number' })`
  *
  * @param {any} value
- *     The value to validate.
+ *    The value to validate.
  * @param {string} [identifier]
- *     Optional name to call `value` in the result, if invalid.
- * @param {AintaTypeOptions} [options={}]
- *     Optional plain object containing optional configuration (default is `{}`)
+ *    Optional name to call `value` in the result, if invalid.
+ * @param {import('./default-options').DefaultOptions} [options={}]
+ *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
- *     Returns `false` if `value` is valid, or an explanation if invalid.
+ *    Returns `false` if `value` is valid, or an explanation if invalid.
  */
 export default function aintaType(
     value,
     identifier,
-    options = {},
+    options = defaultOptions,
 ) {
     // Process the happy path as quickly as possible.
     const type = typeof value;
@@ -73,11 +65,11 @@ const sanitiseString = str =>
  * aintaType() unit tests.
  * 
  * @param {aintaType} f
- *     The `aintaType()` function to test.
+ *    The `aintaType()` function to test.
  * @returns {void}
- *     Does not return anything.
+ *    Does not return anything.
  * @throws
- *     Throws an `Error` if a test fails
+ *    Throws an `Error` if a test fails
  */
 export function aintaTypeTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(

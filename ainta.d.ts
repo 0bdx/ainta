@@ -1,7 +1,11 @@
 /**
- * ### A plain object containing optional configuration for `aintaType()`.
+ * Any one of @0bdx/ainta's validation functions.
  */
-export type AintaTypeOptions = {
+export type Ainta = (arg0: any, arg1: string | null, arg2: any | null) => string | false;
+/**
+ * ### A plain object containing optional configuration for `ainta` functions.
+ */
+export type DefaultOptions = {
     /**
      * Optional text to begin the result with, eg a function name like "isOk()".
      */
@@ -12,49 +16,18 @@ export type AintaTypeOptions = {
     type?: 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
 };
 /**
- * ### A plain object containing optional configuration for `aintaBoolean()`.
- */
-export type AintaBooleanOptions = {
-    /**
-     * Optional text to begin the result with, eg a function name like "isOk()".
-     */
-    begin?: string;
-};
-/**
- * ### A plain object containing optional configuration for `aintaBoolean()`.
- *
- * @typedef {Object} AintaBooleanOptions
- * @property {string} [begin]
- *     Optional text to begin the result with, eg a function name like "isOk()".
- */
-/**
  * ### Validates a boolean.
  *
  * @param {any} value
- *     The value to validate.
+ *    The value to validate.
  * @param {string} [identifier]
- *     Optional name to call `value` in the result, if invalid.
- * @param {AintaBooleanOptions} [options={}]
- *     Optional plain object containing optional configuration (default is `{}`)
+ *    Optional name to call `value` in the result, if invalid.
+ * @param {DefaultOptions} [options={}]
+ *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
- *     Returns `false` if `value` is valid, or an explanation if invalid.
+ *    Returns `false` if `value` is valid, or an explanation if invalid.
  */
-export function aintaBoolean(value: any, identifier?: string, options?: AintaBooleanOptions): false | string;
-/**
- * https://www.npmjs.com/package/@0bdx/ainta
- * @version 0.0.1
- * @license Copyright (c) 2023 0bdx <0@0bdx.com> (0bdx.com)
- * SPDX-License-Identifier: MIT
- */
-/**
- * ### A plain object containing optional configuration for `aintaType()`.
- *
- * @typedef {Object} AintaTypeOptions
- * @property {string} [begin]
- *     Optional text to begin the result with, eg a function name like "isOk()".
- * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
- *     Optional JavaScript type to expect, eg "boolean" or "undefined".
- */
+export function aintaBoolean(value: any, identifier?: string, options?: any): false | string;
 /**
  * ### Validates a value using JavaScript's native `typeof`.
  *
@@ -64,12 +37,49 @@ export function aintaBoolean(value: any, identifier?: string, options?: AintaBoo
  * - `aintaType(NaN, { type:'number' })`
  *
  * @param {any} value
- *     The value to validate.
+ *    The value to validate.
  * @param {string} [identifier]
- *     Optional name to call `value` in the result, if invalid.
- * @param {AintaTypeOptions} [options={}]
- *     Optional plain object containing optional configuration (default is `{}`)
+ *    Optional name to call `value` in the result, if invalid.
+ * @param {DefaultOptions} [options={}]
+ *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
- *     Returns `false` if `value` is valid, or an explanation if invalid.
+ *    Returns `false` if `value` is valid, or an explanation if invalid.
  */
-export function aintaType(value: any, identifier?: string, options?: AintaTypeOptions): false | string;
+export function aintaType(value: any, identifier?: string, options?: any): false | string;
+/** Any one of @0bdx/ainta's validation functions.
+ * @typedef {function(any, string?, DefaultOptions?):string|false} Ainta */
+/**
+ * ### Narrows multiple validation functions, and aggregates their results.
+ *
+ * @example
+ *     import narrowAintas, { aintaInteger } from '@0bdx/ainta';
+ *
+ *     function bothInts(a, b) {
+ *         const [ results, naInteger ] = narrowAintas(
+ *             { begin:'bothInts()', gte:0 }, aintaInteger);
+ *         naInteger(a, 'a', { lte:1000 });
+ *         naInteger(b, 'b', { lte:50 });
+ *         if (results.length) return results;
+ *         return "a and b are both integers, and both in range!";
+ *     }
+ *
+ *     bothInts(1, 99);
+ *     // [ "bothInts(): `b` is 99 which is greater than 50" ]
+ *
+ *     bothInts(0.25);
+ *     // [ "bothInts(): `a` is 0.25 not an integer",
+ *     //   "bothInts(): `b` is type 'undefined' not 'number'" ]
+ *
+ *     bothInts(12, 3);
+ *     // "a and b are both integers, and both in range!"
+ *
+ * @param {DefaultOptions} [options={}]
+ *    Optional plain object containing optional configuration (default is `{}`)
+ * @param {...Ainta} aintas
+ *    Any number of functions, to apply `options` to.
+ * @returns {[string[], ...Ainta[]]}
+ *    The first item of the returned array is `results`. The remaining items
+ *    are the passed-in functions, with `options` applied to them.
+ */
+declare function narrowAintas(options?: any, ...aintas: Ainta[]): [string[], ...Ainta[]];
+export { narrowAintas as default };
