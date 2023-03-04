@@ -1,4 +1,4 @@
-import defaultOptions from './default-options.js';
+import emptyOptions from './options.js';
 import aintaType from './ainta-type.js';
 
 /**
@@ -8,7 +8,7 @@ import aintaType from './ainta-type.js';
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the result, if invalid.
- * @param {import('./default-options').DefaultOptions} [options={}]
+ * @param {import('./options').Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if invalid.
@@ -16,7 +16,7 @@ import aintaType from './ainta-type.js';
 export default function aintaBoolean(
     value,
     identifier,
-    options = defaultOptions,
+    options = emptyOptions,
 ) {
     // Use aintaType() to check whether `value` is a boolean.
     return aintaType(value, identifier, { ...options, type:'boolean' });

@@ -1,4 +1,4 @@
-import defaultOptions from './default-options.js';
+import emptyOptions from './options.js';
 
 /**
  * ### Validates a value using JavaScript's native `typeof`.
@@ -12,7 +12,7 @@ import defaultOptions from './default-options.js';
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the result, if invalid.
- * @param {import('./default-options').DefaultOptions} [options={}]
+ * @param {import('./options').Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if invalid.
@@ -20,7 +20,7 @@ import defaultOptions from './default-options.js';
 export default function aintaType(
     value,
     identifier,
-    options = defaultOptions,
+    options = emptyOptions,
 ) {
     // Process the happy path as quickly as possible.
     const type = typeof value;

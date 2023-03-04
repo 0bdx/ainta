@@ -1,7 +1,7 @@
-import defaultOptions from './default-options.js';
+import emptyOptions from './options.js';
 
 /** Any one of @0bdx/ainta's validation functions.
- * @typedef {function(any, string?, import('./default-options').DefaultOptions?):string|false} Ainta */
+ * @typedef {function(any, string?, import('./options').Options?):string|false} Ainta */
 
 /**
  * ### Narrows multiple validation functions, and aggregates their results.
@@ -28,7 +28,7 @@ import defaultOptions from './default-options.js';
  *     bothInts(12, 3);
  *     // "a and b are both integers, and both in range!"
  *
- * @param {import('./default-options').DefaultOptions} [options={}]
+ * @param {import('./options').Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @param {...Ainta} aintas
  *    Any number of functions, to apply `options` to.
@@ -37,7 +37,7 @@ import defaultOptions from './default-options.js';
  *    are the passed-in functions, with `options` applied to them.
  */
 export default function narrowAintas(
-    options = defaultOptions,
+    options = emptyOptions,
     ...aintas
 ) {
     // Create an empty array, which the passed-in functions can add messages to.
@@ -54,7 +54,7 @@ export default function narrowAintas(
 /**
  * ### Narrows a single validation function.
  *
- * @param {import('./default-options').DefaultOptions} options
+ * @param {import('./options').Options} options
  *    Optional plain object containing optional configuration (default is `{}`)
  * @param {Ainta} ainta
  *    A function to apply `options` to.

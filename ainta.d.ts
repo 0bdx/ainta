@@ -3,12 +3,16 @@
  */
 export type Ainta = (arg0: any, arg1: string | null, arg2: any | null) => string | false;
 /**
- * ### A plain object containing optional configuration for `ainta` functions.
+ * ### A configuration object, used by all `ainta` functions.
  *
- * Exporting a plain `{}` is really a way to export the DefaultOptions type, and
- * avoid "File '.../ainta/src/default-options.js' is not a module.ts (2306)".
+ * Each option is actually optional, so an empty object `{}` is perfectly valid.
+ *
+ * Different options are used by different `ainta` functions. For example:
+ * - `options.keys` is only used by `aintaEnum()`
+ * - `options.gte` is only used by `aintaNumber()` and `aintaInteger()`
+ * - `options.before` is used all the `ainta` functions
  */
-export type DefaultOptions = {
+export type Options = {
     /**
      * Optional text to begin the result with, eg a function name like "isOk()".
      */
@@ -25,7 +29,7 @@ export type DefaultOptions = {
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the result, if invalid.
- * @param {DefaultOptions} [options={}]
+ * @param {Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if invalid.
@@ -43,14 +47,14 @@ export function aintaBoolean(value: any, identifier?: string, options?: any): fa
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the result, if invalid.
- * @param {DefaultOptions} [options={}]
+ * @param {Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if invalid.
  */
 export function aintaType(value: any, identifier?: string, options?: any): false | string;
 /** Any one of @0bdx/ainta's validation functions.
- * @typedef {function(any, string?, DefaultOptions?):string|false} Ainta */
+ * @typedef {function(any, string?, Options?):string|false} Ainta */
 /**
  * ### Narrows multiple validation functions, and aggregates their results.
  *
@@ -76,7 +80,7 @@ export function aintaType(value: any, identifier?: string, options?: any): false
  *     bothInts(12, 3);
  *     // "a and b are both integers, and both in range!"
  *
- * @param {DefaultOptions} [options={}]
+ * @param {Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @param {...Ainta} aintas
  *    Any number of functions, to apply `options` to.

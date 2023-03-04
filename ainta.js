@@ -5,23 +5,34 @@
  * SPDX-License-Identifier: MIT
  */
 /**
- * ### A plain object containing optional configuration for `ainta` functions.
+ * ### A configuration object, used by all `ainta` functions.
  * 
- * Exporting a plain `{}` is really a way to export the DefaultOptions type, and
- * avoid "File '.../ainta/src/default-options.js' is not a module.ts (2306)".
+ * Each option is actually optional, so an empty object `{}` is perfectly valid.
+ * 
+ * Different options are used by different `ainta` functions. For example:
+ * - `options.keys` is only used by `aintaEnum()`
+ * - `options.gte` is only used by `aintaNumber()` and `aintaInteger()`
+ * - `options.before` is used all the `ainta` functions
  *
- * @typedef {Object} DefaultOptions
+ * @typedef {Object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
  */
 
-/** @type DefaultOptions */
-const defaultOptions = {};
+/**
+ * ### An empty object with the `Options` type, used by all `ainta` functions.
+ * 
+ * Using an empty `{}` is really a way to export the `Options` type, and avoid a
+ * "File '.../ainta/src/options.js' is not a module. ts(2306)" error.
+ * 
+ * @type Options
+ */
+const emptyOptions = {};
 
 /** Any one of @0bdx/ainta's validation functions.
- * @typedef {function(any, string?, DefaultOptions?):string|false} Ainta */
+ * @typedef {function(any, string?, Options?):string|false} Ainta */
 
 /**
  * ### Narrows multiple validation functions, and aggregates their results.
@@ -48,7 +59,7 @@ const defaultOptions = {};
  *     bothInts(12, 3);
  *     // "a and b are both integers, and both in range!"
  *
- * @param {DefaultOptions} [options={}]
+ * @param {Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @param {...Ainta} aintas
  *    Any number of functions, to apply `options` to.
@@ -57,7 +68,7 @@ const defaultOptions = {};
  *    are the passed-in functions, with `options` applied to them.
  */
 function narrowAintas(
-    options = defaultOptions,
+    options = emptyOptions,
     ...aintas
 ) {
     // Create an empty array, which the passed-in functions can add messages to.
@@ -74,7 +85,7 @@ function narrowAintas(
 /**
  * ### Narrows a single validation function.
  *
- * @param {DefaultOptions} options
+ * @param {Options} options
  *    Optional plain object containing optional configuration (default is `{}`)
  * @param {Ainta} ainta
  *    A function to apply `options` to.
@@ -104,7 +115,7 @@ const narrowAinta = (options, ainta, results) =>
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the result, if invalid.
- * @param {DefaultOptions} [options={}]
+ * @param {Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if invalid.
@@ -112,7 +123,7 @@ const narrowAinta = (options, ainta, results) =>
 function aintaType(
     value,
     identifier,
-    options = defaultOptions,
+    options = emptyOptions,
 ) {
     // Process the happy path as quickly as possible.
     const type = typeof value;
@@ -160,7 +171,7 @@ const sanitiseString = str =>
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the result, if invalid.
- * @param {DefaultOptions} [options={}]
+ * @param {Options} [options={}]
  *    Optional plain object containing optional configuration (default is `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if invalid.
@@ -168,7 +179,7 @@ const sanitiseString = str =>
 function aintaBoolean(
     value,
     identifier,
-    options = defaultOptions,
+    options = emptyOptions,
 ) {
     // Use aintaType() to check whether `value` is a boolean.
     return aintaType(value, identifier, { ...options, type:'boolean' });
