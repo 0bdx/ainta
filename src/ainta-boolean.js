@@ -1,5 +1,6 @@
-import emptyOptions from './options.js';
 import aintaType from './ainta-type.js';
+import { BOOLEAN } from './constants.js';
+import emptyOptions from './options.js';
 
 /**
  * ### Validates a boolean.
@@ -34,7 +35,7 @@ export default function aintaBoolean(
     options = emptyOptions,
 ) {
     // Use aintaType() to check whether `value` is a boolean.
-    return aintaType(value, identifier, { ...options, type:'boolean' });
+    return aintaType(value, identifier, { ...options, type:BOOLEAN });
 }
 
 /**

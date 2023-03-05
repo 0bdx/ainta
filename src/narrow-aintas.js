@@ -11,7 +11,7 @@ import emptyOptions from './options.js';
  * 2. Aggregates the strings returned by those functions
  *
  * In the example below, `narrowAintas()` is used to narrow `aintaInteger()`
- * into `naInteger()`, and then capture multiple validation results:
+ * into `naInteger()`, and then capture its validation results:
  * - `begin:'bothNatural()'` sets a prefix, added to all explanations
  * - `gte:0` checks that the value is not negative
  * - `lte:1000` and `lte:50` specify different maximum values for each argument
@@ -35,7 +35,7 @@ import emptyOptions from './options.js';
  * // [ "bothNatural(): `a` is -5 not gte 0",
  * //   "bothNatural(): `b` is 0.25 not an integer" ]
  *
- * bothNatural(44, 200);
+ * bothNatural(99, 200);
  * // [ "bothNatural(): `b` is 200 not lte 50" ]
  *
  * bothNatural(12, 3);

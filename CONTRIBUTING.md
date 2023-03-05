@@ -35,9 +35,10 @@
 Clone the repository, and `cd` into it:  
 `git clone git@github.com:0bdx/ainta.git && cd ainta`
 
-Install the two dev-dependencies:  
+Install the three dev-dependencies:  
 `npm i`  
 @0bdx/build-helpers 0.0.4, 1 package, 22 kB for 6 items.  
+@rollup/plugin-terser 0.4.0, 17 packages, 4.2 MB for 247 items.  
 rollup 3.18.0, 2 packages, 2.6 MB for 32 items.  
 
 Open the `ainta` repo in VS Code:  
@@ -129,6 +130,7 @@ sed -ix 's/§0/ainta./g' *e.json
 sed -ix 's/author": "/author": "0bdx <0@0bdx.com> (0bdx.com)/' *e.json
 rm package.jsonx
 npm install @0bdx/build-helpers -D
+npm install @rollup/plugin-terser -D
 npm install rollup -D
 ```
 
@@ -177,4 +179,5 @@ npm install rollup -D
     `rm package.jsonx`
 15. Install three dev-dependencies:  
     `npm install @0bdx/build-helpers -D` 0.0.4, 1 package, 22 kB for 6 items  
+    `npm install @rollup/plugin-terser -D` 0.4.0, 17 packages, 4.2 MB for 247 items  
     `npm install rollup -D` 3.18.0, 2 packages, 2.6 MB for 32 items  

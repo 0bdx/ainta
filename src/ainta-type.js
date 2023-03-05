@@ -1,3 +1,15 @@
+import {
+    ARRAY,
+    BIGINT,
+    BOOLEAN,
+    FUNCTION,
+    NUMBER,
+    NULL,
+    OBJECT,
+    STRING,
+    SYMBOL,
+    UNDEFINED,
+} from './constants.js';
 import emptyOptions from './options.js';
 
 /**
@@ -46,29 +58,43 @@ export default function aintaType(
 
     // If `options.type` is invalid, produce a helpful result.
     const badOptionsType = prefix + ' cannot be validated, `options.type` ';
+    const isAnArray = 'is an ' + ARRAY;
+    const isNull = 'is ' + NULL;
+    const isType = 'is type ';
+    const not = ' not ';
+    const notType = not + 'type ';
+    const str = `'${STRING}'`;
     if (options.type === void 0)
-        return `${badOptionsType}is not set`;
+        return `${badOptionsType}is${not}set`;
     if (options.type === null)
-        return `${badOptionsType}is null not type 'string'`;
+        return badOptionsType + isNull + notType + str;
     if (Array.isArray(options.type))
-        return `${badOptionsType}is an array not type 'string'`;
-    if (typeof options.type !== 'string')
-        return `${badOptionsType}is type '${typeof options.type}' not 'string'`;
+        return badOptionsType + isAnArray + notType + str;
+    if (typeof options.type !== STRING)
+        return badOptionsType + isType + `'${typeof options.type}'` + not + str;
     if (!isRecognisedType(options.type))
-        return `${badOptionsType}'${sanitiseString(options.type)}' not known`;
+        return `${badOptionsType}'${sanitiseString(options.type)}'${not}known`;
 
     return `${prefix} ${
         value === null
-            ? 'is null not type'
+            ? isNull + notType
             : Array.isArray(value)
-                ? 'is an array not type'
-                : `is type '${type}' not`
-        } '${options.type}'`
+                ? isAnArray + notType
+                : `${isType}'${type}'${not}`
+        }'${options.type}'`
     ;
 }
 
-const isRecognisedType = type => ['bigint','boolean','function','number',
-    'object','string','symbol','undefined'].indexOf(type) !== -1;
+const isRecognisedType = type => [
+    BIGINT,
+    BOOLEAN,
+    FUNCTION,
+    NUMBER,
+    OBJECT,
+    STRING,
+    SYMBOL,
+    UNDEFINED,
+].indexOf(type) !== -1;
 
 const sanitiseString = str =>
     encodeURI(str.length <= 32 ? str

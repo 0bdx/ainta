@@ -26,26 +26,10 @@ aintaBoolean(null, 'isDone', { begin:'doThings()' });
 // "doThings(): `isDone` is null not type 'boolean'"
 ```
 
-### Passing in the special `results` property:
-
-```js
-import { aintaStringArray } from '@0bdx/ainta';
-
-function isStrArr(a) {
-    const results = [];
-    if (aintaStringArray(a, { max:2, results })) return results;
-    return "It's an array of strings, and there's no more than two!";
-}
-
-isStrArr(12345); // [ "A value is type 'number' not an array" ]
-isStrArr([8,9]); // [ "Item 0 of a value is type 'number' not 'string'" ]
-isStrArr(['a']); // "It's an array of strings, and there's no more than two!"
-```
-
-### Typical `narrowAintas()` usage:
+### Using the `narrowAintas()` helper:
 
 In the example below, `narrowAintas()` is used to narrow `aintaInteger()`
-into `naInteger()`, and then capture multiple validation results:
+into `naInteger()`, and then capture its validation results:
 
 - `begin:'bothNatural()'` sets a prefix, added to all explanations
 - `gte:0` checks that the value is not negative
@@ -70,7 +54,7 @@ bothNatural(-5, 0.25);
 // [ "bothNatural(): `a` is -5 not gte 0",
 //   "bothNatural(): `b` is 0.25 not an integer" ]
 
-bothNatural(44, 200);
+bothNatural(99, 200);
 // [ "bothNatural(): `b` is 200 not lte 50" ]
 
 bothNatural(12, 3);
