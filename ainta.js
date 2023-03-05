@@ -55,6 +55,80 @@ const IS_TYPE = 'is type ';
 const NOT = ' not ';
 
 /**
+ * ### Utilities used by many `ainta` functions.
+ * @private
+ * 
+ * Reduces code duplication, and helps reduce the size of minified code.
+ */
+
+/**
+ * ### Builds the first part of an explanation.
+ * @private
+ *
+ * @param {string} [begin]
+ *    Optional text to begin the result with, eg a function name like "isOk()".
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation.
+ */
+const buildResultPrefix = (begin, identifier) => {
+
+    // Wrap `identifier` in backticks, to make the explanation clearer.
+    // If `identifier` was not set, fall back to the default, "A value".
+    const ident = identifier ? `\`${identifier}\` ` : 'A value ';
+
+    // If `begin` was set, start the prefix with it followed by ": ".
+    // Either way, finish the prefix with the normalised identifier.
+    return (begin ? begin + ': ' : '') + ident;
+};
+
+/**
+ * ### JavaScript's built-in `Array.isArray()`, for smaller minified files.
+ * @private
+ */
+const isArray = Array.isArray;
+
+/**
+ * ### Recognises a `typeof` string.
+ * @private
+ *
+ * @param {string} type
+ *    One of the strings that JavaScript's `typeof` produces, eg "boolean".
+ * @returns {boolean}
+ *    Returns true if `type` is a recognised `typeof` string.
+ */
+const isRecognisedType = type => [
+    BIGINT,
+    BOOLEAN,
+    FUNCTION,
+    NUMBER,
+    OBJECT,
+    STRING,
+    SYMBOL,
+    UNDEFINED,
+].indexOf(type) !== -1;
+
+/**
+ * ### Wraps a string in single-quotes.
+ * @private
+ *
+ * @param {string} [text]
+ *    Text to wrap in single quotes.
+ */
+const quote = text => "'" + text + "'";
+
+
+/**
+ * ### Truncates a string to 32 characters, and then uri-encodes it.
+ * @private
+ *
+ * @param {string} [text]
+ *    Text to sanitise.
+ */
+const sanitise = text =>
+    encodeURI(text.length <= 32 ? text
+        : `${text.slice(0, 21)}...${text.slice(-8)}`);
+
+/**
  * ### A configuration object, used by all `ainta` functions.
  * 
  * Each option is actually optional, so an empty object `{}` is perfectly valid.
@@ -114,20 +188,14 @@ function aintaArray(
     options = emptyOptions,
 ) {
     // Process the happy path as quickly as possible.
-    if (Array.isArray(value)) return false;
-
-    // If `identifier` was not set, fall back to the default, "A value".
-    // If `options.begin` was set, append ": ".
-    const ident = identifier ? `\`${identifier}\`` : 'A value';
-    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
-    const notAnArray = NOT + 'an ' + ARRAY;
+    if (isArray(value)) return false;
 
     // Generate an explanation of what went wrong.
-    return `${prefix} ${
+    return buildResultPrefix(options.begin, identifier) + (
         value === null
             ? IS_NULL
-            : `${IS_TYPE}'${typeof value}'`
-        }${notAnArray}`
+            : IS_TYPE + quote(typeof value)
+        ) + NOT + 'an ' + ARRAY
     ;
 }
 
@@ -170,51 +238,34 @@ function aintaType(
     const type = typeof value;
     if (type === options.type) return false;
 
-    // If `identifier` was not set, fall back to the default, "A value".
-    // If `options.begin` was set, append ": ".
-    const ident = identifier ? `\`${identifier}\`` : 'A value';
-    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
+    // Build the first part of an explanation.
+    const prefix = buildResultPrefix(options.begin, identifier);
 
     // If `options.type` is invalid, produce a helpful result.
-    const badOptionsType = prefix + ' cannot be validated, `options.type` ';
+    const badOptionsType = prefix + 'cannot be validated, `options.type` ';
     const notType = NOT + 'type ';
-    const str = `'${STRING}'`;
+    const qs = quote(STRING);
     if (options.type === void 0)
         return `${badOptionsType}is${NOT}set`;
     if (options.type === null)
-        return badOptionsType + IS_NULL + notType + str;
-    if (Array.isArray(options.type))
-        return badOptionsType + IS_AN_ARRAY + notType + str;
+        return badOptionsType + IS_NULL + notType + qs;
+    if (isArray(options.type))
+        return badOptionsType + IS_AN_ARRAY + notType + qs;
     if (typeof options.type !== STRING)
-        return badOptionsType + IS_TYPE + `'${typeof options.type}'` + NOT + str;
+        return badOptionsType + IS_TYPE + quote(typeof options.type) + NOT + qs;
     if (!isRecognisedType(options.type))
-        return `${badOptionsType}'${sanitiseString(options.type)}'${NOT}known`;
+        return badOptionsType + quote(sanitise(options.type)) + NOT + 'known';
 
     // Otherwise, generate an explanation of what went wrong.
-    return `${prefix} ${
+    return prefix + (
         value === null
             ? IS_NULL + notType
-            : Array.isArray(value)
+            : isArray(value)
                 ? IS_AN_ARRAY + notType
-                : `${IS_TYPE}'${type}'${NOT}`
-        }'${options.type}'`
+                : IS_TYPE + quote(type) + NOT
+        ) + quote(options.type)
     ;
 }
-
-const isRecognisedType = type => [
-    BIGINT,
-    BOOLEAN,
-    FUNCTION,
-    NUMBER,
-    OBJECT,
-    STRING,
-    SYMBOL,
-    UNDEFINED,
-].indexOf(type) !== -1;
-
-const sanitiseString = str =>
-    encodeURI(str.length <= 32 ? str
-        : `${str.slice(0, 21)}...${str.slice(-8)}`);
 
 /**
  * ### Validates a boolean.
@@ -287,17 +338,12 @@ function aintaNull(
     // Process the happy path as quickly as possible.
     if (value === null) return false;
 
-    // If `identifier` was not set, fall back to the default, "A value".
-    // If `options.begin` was set, append ": ".
-    const ident = identifier ? `\`${identifier}\`` : 'A value';
-    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
-
     // Generate an explanation of what went wrong.
-    return `${prefix} ${
-        Array.isArray(value)
-            ? IS_AN_ARRAY + NOT
-            : `${IS_TYPE}'${typeof value}'${NOT}`
-        }${NULL}`
+    return buildResultPrefix(options.begin, identifier) + (
+        isArray(value)
+            ? IS_AN_ARRAY
+            : IS_TYPE + quote(typeof value)
+        ) + NOT + NULL
     ;
 }
 

@@ -1,18 +1,17 @@
 import {
-    BIGINT,
-    BOOLEAN,
-    FUNCTION,
     IS_AN_ARRAY,
     IS_NULL,
     IS_TYPE,
     NOT,
-    NUMBER,
-    NULL,
-    OBJECT,
     STRING,
-    SYMBOL,
-    UNDEFINED,
 } from './constants.js';
+import {
+    buildResultPrefix,
+    isArray,
+    isRecognisedType,
+    quote,
+    sanitise
+} from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
@@ -54,51 +53,34 @@ export default function aintaType(
     const type = typeof value;
     if (type === options.type) return false;
 
-    // If `identifier` was not set, fall back to the default, "A value".
-    // If `options.begin` was set, append ": ".
-    const ident = identifier ? `\`${identifier}\`` : 'A value';
-    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
+    // Build the first part of an explanation.
+    const prefix = buildResultPrefix(options.begin, identifier);
 
     // If `options.type` is invalid, produce a helpful result.
-    const badOptionsType = prefix + ' cannot be validated, `options.type` ';
+    const badOptionsType = prefix + 'cannot be validated, `options.type` ';
     const notType = NOT + 'type ';
-    const str = `'${STRING}'`;
+    const qs = quote(STRING);
     if (options.type === void 0)
         return `${badOptionsType}is${NOT}set`;
     if (options.type === null)
-        return badOptionsType + IS_NULL + notType + str;
-    if (Array.isArray(options.type))
-        return badOptionsType + IS_AN_ARRAY + notType + str;
+        return badOptionsType + IS_NULL + notType + qs;
+    if (isArray(options.type))
+        return badOptionsType + IS_AN_ARRAY + notType + qs;
     if (typeof options.type !== STRING)
-        return badOptionsType + IS_TYPE + `'${typeof options.type}'` + NOT + str;
+        return badOptionsType + IS_TYPE + quote(typeof options.type) + NOT + qs;
     if (!isRecognisedType(options.type))
-        return `${badOptionsType}'${sanitiseString(options.type)}'${NOT}known`;
+        return badOptionsType + quote(sanitise(options.type)) + NOT + 'known';
 
     // Otherwise, generate an explanation of what went wrong.
-    return `${prefix} ${
+    return prefix + (
         value === null
             ? IS_NULL + notType
-            : Array.isArray(value)
+            : isArray(value)
                 ? IS_AN_ARRAY + notType
-                : `${IS_TYPE}'${type}'${NOT}`
-        }'${options.type}'`
+                : IS_TYPE + quote(type) + NOT
+        ) + quote(options.type)
     ;
 }
-
-const isRecognisedType = type => [
-    BIGINT,
-    BOOLEAN,
-    FUNCTION,
-    NUMBER,
-    OBJECT,
-    STRING,
-    SYMBOL,
-    UNDEFINED,
-].indexOf(type) !== -1;
-
-const sanitiseString = str =>
-    encodeURI(str.length <= 32 ? str
-        : `${str.slice(0, 21)}...${str.slice(-8)}`)
 
 /**
  * aintaType() unit tests.

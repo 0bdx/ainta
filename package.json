@@ -5,7 +5,8 @@
   "type": "module",
   "files": [
     "ainta.d.ts",
-    "ainta.js"
+    "ainta.js",
+    "ainta.min.js"
   ],
   "engines": {
     "node": ">= 14.0.0"

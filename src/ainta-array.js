@@ -4,6 +4,7 @@ import {
     IS_TYPE,
     NOT,
 } from './constants.js';
+import { buildResultPrefix, isArray, quote } from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
@@ -39,20 +40,14 @@ export default function aintaArray(
     options = emptyOptions,
 ) {
     // Process the happy path as quickly as possible.
-    if (Array.isArray(value)) return false;
-
-    // If `identifier` was not set, fall back to the default, "A value".
-    // If `options.begin` was set, append ": ".
-    const ident = identifier ? `\`${identifier}\`` : 'A value';
-    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
-    const notAnArray = NOT + 'an ' + ARRAY;
+    if (isArray(value)) return false;
 
     // Generate an explanation of what went wrong.
-    return `${prefix} ${
+    return buildResultPrefix(options.begin, identifier) + (
         value === null
             ? IS_NULL
-            : `${IS_TYPE}'${typeof value}'`
-        }${notAnArray}`
+            : IS_TYPE + quote(typeof value)
+        ) + NOT + 'an ' + ARRAY
     ;
 }
 

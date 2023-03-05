@@ -4,6 +4,7 @@ import {
     NOT,
     NULL,
 } from './constants.js';
+import { buildResultPrefix, isArray, quote } from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
@@ -41,17 +42,12 @@ export default function aintaNull(
     // Process the happy path as quickly as possible.
     if (value === null) return false;
 
-    // If `identifier` was not set, fall back to the default, "A value".
-    // If `options.begin` was set, append ": ".
-    const ident = identifier ? `\`${identifier}\`` : 'A value';
-    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
-
     // Generate an explanation of what went wrong.
-    return `${prefix} ${
-        Array.isArray(value)
-            ? IS_AN_ARRAY + NOT
-            : `${IS_TYPE}'${typeof value}'${NOT}`
-        }${NULL}`
+    return buildResultPrefix(options.begin, identifier) + (
+        isArray(value)
+            ? IS_AN_ARRAY
+            : IS_TYPE + quote(typeof value)
+        ) + NOT + NULL
     ;
 }
 
