@@ -24,6 +24,15 @@ const BOOLEAN = 'boolean';
 /** @constant {string} FUNCTION The literal string "function" */
 const FUNCTION = 'function';
 
+/** @constant {string} IS_AN_ARRAY The literal string "is an array" */
+const IS_AN_ARRAY = 'is an ' + ARRAY;
+
+/** @constant {string} IS_TYPE The literal string "is type" */
+const IS_TYPE = 'is type ';
+
+/** @constant {string} NOT The literal string " not " */
+const NOT = ' not ';
+
 /** @constant {string} NULL The literal string "null" */
 const NULL = 'null';
 
@@ -115,29 +124,28 @@ function aintaType(
 
     // If `options.type` is invalid, produce a helpful result.
     const badOptionsType = prefix + ' cannot be validated, `options.type` ';
-    const isAnArray = 'is an ' + ARRAY;
     const isNull = 'is ' + NULL;
-    const isType = 'is type ';
-    const not = ' not ';
-    const notType = not + 'type ';
+    const IS_TYPE = 'is type ';
+    const notType = NOT + 'type ';
     const str = `'${STRING}'`;
     if (options.type === void 0)
-        return `${badOptionsType}is${not}set`;
+        return `${badOptionsType}is${NOT}set`;
     if (options.type === null)
         return badOptionsType + isNull + notType + str;
     if (Array.isArray(options.type))
-        return badOptionsType + isAnArray + notType + str;
+        return badOptionsType + IS_AN_ARRAY + notType + str;
     if (typeof options.type !== STRING)
-        return badOptionsType + isType + `'${typeof options.type}'` + not + str;
+        return badOptionsType + IS_TYPE + `'${typeof options.type}'` + NOT + str;
     if (!isRecognisedType(options.type))
-        return `${badOptionsType}'${sanitiseString(options.type)}'${not}known`;
+        return `${badOptionsType}'${sanitiseString(options.type)}'${NOT}known`;
 
+    // Otherwise, generate an explanation of what went wrong.
     return `${prefix} ${
         value === null
             ? isNull + notType
             : Array.isArray(value)
-                ? isAnArray + notType
-                : `${isType}'${type}'${not}`
+                ? IS_AN_ARRAY + notType
+                : `${IS_TYPE}'${type}'${NOT}`
         }'${options.type}'`
     ;
 }
@@ -191,6 +199,55 @@ function aintaBoolean(
 ) {
     // Use aintaType() to check whether `value` is a boolean.
     return aintaType(value, identifier, { ...options, type:BOOLEAN });
+}
+
+/**
+ * ### Validates that a value is exactly `null`.
+ *
+ * If the first argument passed to `aintaNull()` ain't a `null`, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaNull } from '@0bdx/ainta';
+ * 
+ * aintaNull(null);
+ * // false
+ *
+ * aintaNull();
+ * // "A value is type 'undefined' not null"
+ *
+ * aintaNull(false, 'x', { begin:'expectNull()' });
+ * // "expectNull(): `x` is type 'boolean' not null"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaNull(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Process the happy path as quickly as possible.
+    if (value === null) return false;
+
+    // If `identifier` was not set, fall back to the default, "A value".
+    // If `options.begin` was set, append ": ".
+    const ident = identifier ? `\`${identifier}\`` : 'A value';
+    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
+
+    // Generate an explanation of what went wrong.
+    return `${prefix} ${
+        Array.isArray(value)
+            ? IS_AN_ARRAY + NOT
+            : `${IS_TYPE}'${typeof value}'${NOT}`
+        }${NULL}`
+    ;
 }
 
 /** Any one of `ainta`'s validation functions.
@@ -279,4 +336,4 @@ const narrowAinta = (options, ainta, results) =>
         return result;
     };
 
-export { aintaBoolean, aintaType, narrowAintas as default };
+export { aintaBoolean, aintaNull, aintaType, narrowAintas as default };

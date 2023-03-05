@@ -51,6 +51,34 @@ export type Options = {
  */
 export function aintaBoolean(value: any, identifier?: string, options?: any): false | string;
 /**
+ * ### Validates that a value is exactly `null`.
+ *
+ * If the first argument passed to `aintaNull()` ain't a `null`, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaNull } from '@0bdx/ainta';
+ *
+ * aintaNull(null);
+ * // false
+ *
+ * aintaNull();
+ * // "A value is type 'undefined' not null"
+ *
+ * aintaNull(false, 'x', { begin:'expectNull()' });
+ * // "expectNull(): `x` is type 'boolean' not null"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+export function aintaNull(value: any, identifier?: string, options?: any): false | string;
+/**
  * ### Validates a value using JavaScript's native `typeof`.
  *
  * If the `typeof` the first argument passed to `aintaType()` ain't

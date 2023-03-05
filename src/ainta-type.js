@@ -1,8 +1,10 @@
 import {
-    ARRAY,
     BIGINT,
     BOOLEAN,
     FUNCTION,
+    IS_AN_ARRAY,
+    IS_TYPE,
+    NOT,
     NUMBER,
     NULL,
     OBJECT,
@@ -58,29 +60,28 @@ export default function aintaType(
 
     // If `options.type` is invalid, produce a helpful result.
     const badOptionsType = prefix + ' cannot be validated, `options.type` ';
-    const isAnArray = 'is an ' + ARRAY;
     const isNull = 'is ' + NULL;
-    const isType = 'is type ';
-    const not = ' not ';
-    const notType = not + 'type ';
+    const IS_TYPE = 'is type ';
+    const notType = NOT + 'type ';
     const str = `'${STRING}'`;
     if (options.type === void 0)
-        return `${badOptionsType}is${not}set`;
+        return `${badOptionsType}is${NOT}set`;
     if (options.type === null)
         return badOptionsType + isNull + notType + str;
     if (Array.isArray(options.type))
-        return badOptionsType + isAnArray + notType + str;
+        return badOptionsType + IS_AN_ARRAY + notType + str;
     if (typeof options.type !== STRING)
-        return badOptionsType + isType + `'${typeof options.type}'` + not + str;
+        return badOptionsType + IS_TYPE + `'${typeof options.type}'` + NOT + str;
     if (!isRecognisedType(options.type))
-        return `${badOptionsType}'${sanitiseString(options.type)}'${not}known`;
+        return `${badOptionsType}'${sanitiseString(options.type)}'${NOT}known`;
 
+    // Otherwise, generate an explanation of what went wrong.
     return `${prefix} ${
         value === null
             ? isNull + notType
             : Array.isArray(value)
-                ? isAnArray + notType
-                : `${isType}'${type}'${not}`
+                ? IS_AN_ARRAY + notType
+                : `${IS_TYPE}'${type}'${NOT}`
         }'${options.type}'`
     ;
 }
