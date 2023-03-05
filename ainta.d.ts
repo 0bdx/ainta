@@ -23,6 +23,34 @@ export type Options = {
     type?: 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
 };
 /**
+ * ### Validates a value using JavaScript's native `Array.isArray()`.
+ *
+ * If the first argument passed to `aintaArray()` ain't an array, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaArray } from '@0bdx/ainta';
+ *
+ * aintaArray([1, 2, 3]);
+ * // false
+ *
+ * aintaArray({});
+ * // "A value is type 'object' not an array"
+ *
+ * aintaArray(null, 'list', { begin:'processList()' });
+ * // "processList(): `list` is null not an array"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+export function aintaArray(value: any, identifier?: string, options?: any): false | string;
+/**
  * ### Validates a boolean.
  *
  * If the first argument passed to `aintaBoolean()` ain't a boolean, it returns

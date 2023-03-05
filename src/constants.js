@@ -18,15 +18,6 @@ export const BOOLEAN = 'boolean';
 /** @constant {string} FUNCTION The literal string "function" */
 export const FUNCTION = 'function';
 
-/** @constant {string} IS_AN_ARRAY The literal string "is an array" */
-export const IS_AN_ARRAY = 'is an ' + ARRAY;
-
-/** @constant {string} IS_TYPE The literal string "is type" */
-export const IS_TYPE = 'is type ';
-
-/** @constant {string} NOT The literal string " not " */
-export const NOT = ' not ';
-
 /** @constant {string} NULL The literal string "null" */
 export const NULL = 'null';
 
@@ -44,3 +35,15 @@ export const SYMBOL = 'symbol';
 
 /** @constant {string} UNDEFINED The literal string "undefined" */
 export const UNDEFINED = 'undefined';
+
+/** @constant {string} IS_AN_ARRAY The literal string "is an array" */
+export const IS_AN_ARRAY = 'is an ' + ARRAY;
+
+/** @constant {string} IS_NULL The literal string "is null" */
+export const IS_NULL = 'is ' + NULL;
+
+/** @constant {string} IS_TYPE The literal string "is type" */
+export const IS_TYPE = 'is type ';
+
+/** @constant {string} NOT The literal string " not " */
+export const NOT = ' not ';

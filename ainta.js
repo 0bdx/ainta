@@ -24,15 +24,6 @@ const BOOLEAN = 'boolean';
 /** @constant {string} FUNCTION The literal string "function" */
 const FUNCTION = 'function';
 
-/** @constant {string} IS_AN_ARRAY The literal string "is an array" */
-const IS_AN_ARRAY = 'is an ' + ARRAY;
-
-/** @constant {string} IS_TYPE The literal string "is type" */
-const IS_TYPE = 'is type ';
-
-/** @constant {string} NOT The literal string " not " */
-const NOT = ' not ';
-
 /** @constant {string} NULL The literal string "null" */
 const NULL = 'null';
 
@@ -50,6 +41,18 @@ const SYMBOL = 'symbol';
 
 /** @constant {string} UNDEFINED The literal string "undefined" */
 const UNDEFINED = 'undefined';
+
+/** @constant {string} IS_AN_ARRAY The literal string "is an array" */
+const IS_AN_ARRAY = 'is an ' + ARRAY;
+
+/** @constant {string} IS_NULL The literal string "is null" */
+const IS_NULL = 'is ' + NULL;
+
+/** @constant {string} IS_TYPE The literal string "is type" */
+const IS_TYPE = 'is type ';
+
+/** @constant {string} NOT The literal string " not " */
+const NOT = ' not ';
 
 /**
  * ### A configuration object, used by all `ainta` functions.
@@ -77,6 +80,56 @@ const UNDEFINED = 'undefined';
  * @type Options
  */
 const emptyOptions = {};
+
+/**
+ * ### Validates a value using JavaScript's native `Array.isArray()`.
+ *
+ * If the first argument passed to `aintaArray()` ain't an array, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaArray } from '@0bdx/ainta';
+ * 
+ * aintaArray([1, 2, 3]);
+ * // false
+ *
+ * aintaArray({});
+ * // "A value is type 'object' not an array"
+ *
+ * aintaArray(null, 'list', { begin:'processList()' });
+ * // "processList(): `list` is null not an array"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaArray(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Process the happy path as quickly as possible.
+    if (Array.isArray(value)) return false;
+
+    // If `identifier` was not set, fall back to the default, "A value".
+    // If `options.begin` was set, append ": ".
+    const ident = identifier ? `\`${identifier}\`` : 'A value';
+    const prefix = options.begin ? `${options.begin}: ${ident}` : ident;
+    const notAnArray = NOT + 'an ' + ARRAY;
+
+    // Generate an explanation of what went wrong.
+    return `${prefix} ${
+        value === null
+            ? IS_NULL
+            : `${IS_TYPE}'${typeof value}'`
+        }${notAnArray}`
+    ;
+}
 
 /**
  * ### Validates a value using JavaScript's native `typeof`.
@@ -124,14 +177,12 @@ function aintaType(
 
     // If `options.type` is invalid, produce a helpful result.
     const badOptionsType = prefix + ' cannot be validated, `options.type` ';
-    const isNull = 'is ' + NULL;
-    const IS_TYPE = 'is type ';
     const notType = NOT + 'type ';
     const str = `'${STRING}'`;
     if (options.type === void 0)
         return `${badOptionsType}is${NOT}set`;
     if (options.type === null)
-        return badOptionsType + isNull + notType + str;
+        return badOptionsType + IS_NULL + notType + str;
     if (Array.isArray(options.type))
         return badOptionsType + IS_AN_ARRAY + notType + str;
     if (typeof options.type !== STRING)
@@ -142,7 +193,7 @@ function aintaType(
     // Otherwise, generate an explanation of what went wrong.
     return `${prefix} ${
         value === null
-            ? isNull + notType
+            ? IS_NULL + notType
             : Array.isArray(value)
                 ? IS_AN_ARRAY + notType
                 : `${IS_TYPE}'${type}'${NOT}`
@@ -336,4 +387,4 @@ const narrowAinta = (options, ainta, results) =>
         return result;
     };
 
-export { aintaBoolean, aintaNull, aintaType, narrowAintas as default };
+export { aintaArray, aintaBoolean, aintaNull, aintaType, narrowAintas as default };

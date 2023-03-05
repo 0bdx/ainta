@@ -3,6 +3,7 @@ import {
     BOOLEAN,
     FUNCTION,
     IS_AN_ARRAY,
+    IS_NULL,
     IS_TYPE,
     NOT,
     NUMBER,
@@ -60,14 +61,12 @@ export default function aintaType(
 
     // If `options.type` is invalid, produce a helpful result.
     const badOptionsType = prefix + ' cannot be validated, `options.type` ';
-    const isNull = 'is ' + NULL;
-    const IS_TYPE = 'is type ';
     const notType = NOT + 'type ';
     const str = `'${STRING}'`;
     if (options.type === void 0)
         return `${badOptionsType}is${NOT}set`;
     if (options.type === null)
-        return badOptionsType + isNull + notType + str;
+        return badOptionsType + IS_NULL + notType + str;
     if (Array.isArray(options.type))
         return badOptionsType + IS_AN_ARRAY + notType + str;
     if (typeof options.type !== STRING)
@@ -78,7 +77,7 @@ export default function aintaType(
     // Otherwise, generate an explanation of what went wrong.
     return `${prefix} ${
         value === null
-            ? isNull + notType
+            ? IS_NULL + notType
             : Array.isArray(value)
                 ? IS_AN_ARRAY + notType
                 : `${IS_TYPE}'${type}'${NOT}`
