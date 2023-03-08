@@ -107,6 +107,34 @@ export function aintaBoolean(value: any, identifier?: string, options?: any): fa
  */
 export function aintaNull(value: any, identifier?: string, options?: any): false | string;
 /**
+ * ### Validates a number.
+ *
+ * If the first argument passed to `aintaNumber()` ain't a number, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaNumber } from '@0bdx/ainta';
+ *
+ * aintaNumber(-Infinity);
+ * // false
+ *
+ * aintaNumber(NaN);
+ * // "A value is the special `NaN` value"
+ *
+ * aintaNumber('99', 'redBalloons', { begin:'flyBalloons()' });
+ * // "flyBalloons(): `redBalloons` is type 'string' not 'number'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+export function aintaNumber(value: any, identifier?: string, options?: any): false | string;
+/**
  * ### Validates a value using JavaScript's native `typeof`.
  *
  * If the `typeof` the first argument passed to `aintaType()` ain't

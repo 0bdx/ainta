@@ -347,6 +347,53 @@ function aintaNull(
     ;
 }
 
+/**
+ * ### Validates a number.
+ *
+ * If the first argument passed to `aintaNumber()` ain't a number, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaNumber } from '@0bdx/ainta';
+ * 
+ * aintaNumber(-Infinity);
+ * // false
+ *
+ * aintaNumber(NaN);
+ * // "A value is the special `NaN` value"
+ *
+ * aintaNumber('99', 'redBalloons', { begin:'flyBalloons()' });
+ * // "flyBalloons(): `redBalloons` is type 'string' not 'number'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaNumber(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Use aintaType() to check whether `typeof value` is 'number'.
+    // If not, bail out right away.
+    const result = aintaType(value, identifier, { ...options, type:NUMBER });
+    if (result) return result;
+
+    // If `value` is JavaScript's special `NaN` then `typeof value` is 'number'.
+    // aintaNumber() differs from `aintaType(..., { type:'number' })`, in that
+    // it considers `NaN` to not be a number.
+    // Note that `value` must be a number here - `Number.isNaN()` is not needed.
+    if (isNaN(value)) return buildResultPrefix(options.begin, identifier) +
+        'is the special `NaN` value';
+
+    return false;
+}
+
 /** Any one of `ainta`'s validation functions.
  * @typedef {function(any, string?, Options?):string|false} Ainta */
 
@@ -433,4 +480,4 @@ const narrowAinta = (options, ainta, results) =>
         return result;
     };
 
-export { aintaArray, aintaBoolean, aintaNull, aintaType, narrowAintas as default };
+export { aintaArray, aintaBoolean, aintaNull, aintaNumber, aintaType, narrowAintas as default };
