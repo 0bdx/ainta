@@ -11,6 +11,10 @@
  * @typedef {Object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
+ * @property {number} [gte]
+ *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {number} [lte]
+ *    Optional maximum value. Short for 'Less Than or Equal'.
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
  */

@@ -8,6 +8,9 @@ import emptyOptions from './options.js';
  *
  * If the first argument passed to `aintaNumber()` ain't a number, it returns
  * a short explanation of what went wrong. Otherwise it returns `false`.
+ * 
+ * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
+ * doesn't consider `NaN` to be a number
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
@@ -37,17 +40,28 @@ export default function aintaNumber(
 ) {
     // Use aintaType() to check whether `typeof value` is 'number'.
     // If not, bail out right away.
-    const result = aintaType(value, identifier, { ...options, type:NUMBER });
+    let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // If `value` is JavaScript's special `NaN` then `typeof value` is 'number'.
-    // aintaNumber() differs from `aintaType(..., { type:'number' })`, in that
-    // it considers `NaN` to not be a number.
-    // Note that `value` must be a number here - `Number.isNaN()` is not needed.
-    if (isNaN(value)) return buildResultPrefix(options.begin, identifier) +
-        'is the special `NaN` value';
+    // `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that
+    // it doesn't consider `NaN` to be a number. At this point `typeof value` is
+    // 'number' but it could be `NaN`, so use `isNaN()` to check. Note that the
+    // newer `Number.isNaN()` is not necessary in this case.
+    result = isNaN(value)
+        ? 'is the special `NaN` value'
 
-    return false;
+        // Compare `value` with the 'Greater Than or Equal' option, if present.
+        : 'gte' in options && options.gte > value
+            ? value + ' is not gte ' + options.gte
+
+            // Compare `value` with the 'Less Than or Equal' option, if present.
+            : 'lte' in options && options.lte < value
+                ? value + ' is not lte ' + options.lte
+                : '';
+
+    return result
+        ? buildResultPrefix(options.begin, identifier) + result
+        : false;
 }
 
 /**
@@ -83,6 +97,42 @@ export function aintaNumberTest(f) {
         "`arr` is an array not type 'number'");
     equal(f('123', void 0, { type:'string' }),
         "A value is type 'string' not 'number'");
+
+    // Typical options.gte usage.
+    equal(f(10, null, { gte:5 }),
+        false);
+    equal(f(2, null, { gte:5 }),
+        "A value 2 is not gte 5");
+    equal(f(0b100101, 'binary', { gte:37 }),
+        false);
+    equal(f(0b100100, 'binary', { gte:37 }),
+        "`binary` 36 is not gte 37");
+    equal(f(-55, null, { begin:'Number Test', gte:-55 }),
+        false);
+    equal(f(-55.0001, null, { begin:'Number Test', gte:-55 }),
+        "Number Test: A value -55.0001 is not gte -55");
+    equal(f(10e-3, '1%', { begin:'percent()', gte:10e-3 }),
+        false);
+    equal(f(Number(false), '0%', { begin:'percent()', gte:10e-3 }),
+        "percent(): `0%` 0 is not gte 0.01");
+
+    // Typical options.lte usage.
+    equal(f(10, null, { lte:5 }),
+        "A value 10 is not lte 5");
+    equal(f(5, null, { lte:5 }),
+        false);
+    equal(f(0xabc, 'hex', { lte:37 }),
+        "`hex` 2748 is not lte 37");
+    equal(f(0x1bc, 'hex', { lte:5000 }),
+        false);
+    equal(f(-54.9999, null, { begin:'Number Test', lte:-55 }),
+        "Number Test: A value -54.9999 is not lte -55");
+    equal(f(-55.0001, null, { begin:'Number Test', lte:-55 }),
+        false);
+    equal(f(2 * 10e-3, '2%', { begin:'percent()', lte:10e-3 }),
+        "percent(): `2%` 0.02 is not lte 0.01");
+    equal(f(Number(false), '0%', { begin:'percent()', lte:10e-3 }),
+        false);
 
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error

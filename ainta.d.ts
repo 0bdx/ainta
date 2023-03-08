@@ -18,6 +18,14 @@ export type Options = {
      */
     begin?: string;
     /**
+     * Optional minimum value. Short for 'Greater Than or Equal'.
+     */
+    gte?: number;
+    /**
+     * Optional maximum value. Short for 'Less Than or Equal'.
+     */
+    lte?: number;
+    /**
      * Optional JavaScript type to expect, eg "boolean" or "undefined".
      */
     type?: 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
@@ -111,6 +119,9 @@ export function aintaNull(value: any, identifier?: string, options?: any): false
  *
  * If the first argument passed to `aintaNumber()` ain't a number, it returns
  * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
+ * doesn't consider `NaN` to be a number
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';

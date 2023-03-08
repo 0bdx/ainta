@@ -141,6 +141,10 @@ const sanitise = text =>
  * @typedef {Object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
+ * @property {number} [gte]
+ *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {number} [lte]
+ *    Optional maximum value. Short for 'Less Than or Equal'.
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
  */
@@ -352,6 +356,9 @@ function aintaNull(
  *
  * If the first argument passed to `aintaNumber()` ain't a number, it returns
  * a short explanation of what went wrong. Otherwise it returns `false`.
+ * 
+ * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
+ * doesn't consider `NaN` to be a number
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
@@ -381,17 +388,28 @@ function aintaNumber(
 ) {
     // Use aintaType() to check whether `typeof value` is 'number'.
     // If not, bail out right away.
-    const result = aintaType(value, identifier, { ...options, type:NUMBER });
+    let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // If `value` is JavaScript's special `NaN` then `typeof value` is 'number'.
-    // aintaNumber() differs from `aintaType(..., { type:'number' })`, in that
-    // it considers `NaN` to not be a number.
-    // Note that `value` must be a number here - `Number.isNaN()` is not needed.
-    if (isNaN(value)) return buildResultPrefix(options.begin, identifier) +
-        'is the special `NaN` value';
+    // `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that
+    // it doesn't consider `NaN` to be a number. At this point `typeof value` is
+    // 'number' but it could be `NaN`, so use `isNaN()` to check. Note that the
+    // newer `Number.isNaN()` is not necessary in this case.
+    result = isNaN(value)
+        ? 'is the special `NaN` value'
 
-    return false;
+        // Compare `value` with the 'Greater Than or Equal' option, if present.
+        : 'gte' in options && options.gte > value
+            ? value + ' is not gte ' + options.gte
+
+            // Compare `value` with the 'Less Than or Equal' option, if present.
+            : 'lte' in options && options.lte < value
+                ? value + ' is not lte ' + options.lte
+                : '';
+
+    return result
+        ? buildResultPrefix(options.begin, identifier) + result
+        : false;
 }
 
 /** Any one of `ainta`'s validation functions.
