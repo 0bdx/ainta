@@ -1,14 +1,18 @@
 import {
+    _NOT_,
+    _NOT_TYPE_,
+    CANNOT_OPTIONS,
     IS_AN_ARRAY,
     IS_NULL,
-    IS_TYPE,
-    NOT,
+    IS_TYPE_,
     STRING,
+    TYPE,
 } from './constants.js';
 import {
     buildResultPrefix,
     isArray,
     isRecognisedType,
+    QS,
     quote,
     sanitise
 } from './helpers.js';
@@ -43,6 +47,7 @@ import emptyOptions from './options.js';
  *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if `options.type` is invalid.
  */
 export default function aintaType(
     value,
@@ -56,29 +61,28 @@ export default function aintaType(
     // Build the first part of an explanation.
     const prefix = buildResultPrefix(options.begin, identifier);
 
-    // If `options.type` is invalid, produce a helpful result.
-    const badOptionsType = prefix + 'cannot be validated, `options.type` ';
-    const notType = NOT + 'type ';
-    const qs = quote(STRING);
-    if (options.type === void 0)
-        return `${badOptionsType}is${NOT}set`;
-    if (options.type === null)
-        return badOptionsType + IS_NULL + notType + qs;
-    if (isArray(options.type))
-        return badOptionsType + IS_AN_ARRAY + notType + qs;
-    if (typeof options.type !== STRING)
-        return badOptionsType + IS_TYPE + quote(typeof options.type) + NOT + qs;
-    if (!isRecognisedType(options.type))
-        return badOptionsType + quote(sanitise(options.type)) + NOT + 'known';
+    // If `options.type` is invalid, return a helpful result.
+    const badOptionsType = prefix + CANNOT_OPTIONS + TYPE + '` ';
+    if (!(TYPE in options))
+        return `${badOptionsType}is${_NOT_}set`;
+    const optionsType = options.type;
+    if (optionsType === null)
+        return badOptionsType + IS_NULL + _NOT_TYPE_ + QS;
+    if (isArray(optionsType))
+        return badOptionsType + IS_AN_ARRAY + _NOT_TYPE_ + QS;
+    if (typeof optionsType !== STRING)
+        return badOptionsType + IS_TYPE_ + quote(typeof optionsType) + _NOT_ + QS;
+    if (!isRecognisedType(optionsType))
+        return badOptionsType + quote(sanitise(optionsType)) + _NOT_ + 'known';
 
     // Otherwise, generate an explanation of what went wrong.
     return prefix + (
         value === null
-            ? IS_NULL + notType
+            ? IS_NULL + _NOT_TYPE_
             : isArray(value)
-                ? IS_AN_ARRAY + notType
-                : IS_TYPE + quote(type) + NOT
-        ) + quote(options.type)
+                ? IS_AN_ARRAY + _NOT_TYPE_
+                : IS_TYPE_ + quote(type) + _NOT_
+        ) + quote(optionsType)
     ;
 }
 
@@ -96,7 +100,7 @@ export function aintaTypeTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
 
-    // Undefined `options.type` produces a helpful result.
+    // Produces a helpful result when `options.type` is not set.
     equal(f(),
         "A value cannot be validated, `options.type` is not set");
     equal(f(123),
@@ -107,18 +111,18 @@ export function aintaTypeTest(f) {
         "`noWay` cannot be validated, `options.type` is not set");
     equal(f('str', '', { begin:'noType' }),
         "noType: A value cannot be validated, `options.type` is not set");
-    equal(f(null, 'noway', { begin:'noType', type:void 0 }),
-        "noType: `noway` cannot be validated, `options.type` is not set");
 
     // Invalid `options.type` produces a helpful result.
+    equal(f(null, 'v', { type:void 0 }),
+        "`v` cannot be validated, `options.type` is type 'undefined' not 'string'");
     equal(f(0.5, 'half', { type:null }),
         "`half` cannot be validated, `options.type` is null not type 'string'");
     // @ts-expect-error
     equal(f(undefined, '-', { type:[] }),
         "`-` cannot be validated, `options.type` is an array not type 'string'");
     // @ts-expect-error
-    equal(f(false, 'X', { type:{} }),
-        "`X` cannot be validated, `options.type` is type 'object' not 'string'");
+    equal(f(false, 'X', { type:NaN }), // no mention of the special `NaN` value
+        "`X` cannot be validated, `options.type` is type 'number' not 'string'");
     // @ts-expect-error
     equal(f(0.25, null, { begin:'bad()', type:'nope' }),
         "bad(): A value cannot be validated, `options.type` 'nope' not known");

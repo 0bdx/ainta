@@ -42,17 +42,47 @@ const SYMBOL = 'symbol';
 /** @constant {string} UNDEFINED The literal string "undefined" */
 const UNDEFINED = 'undefined';
 
+/** @constant {string} GTE The literal string "gte" */
+const GTE = 'gte';
+
+/** @constant {string} LTE The literal string "lte" */
+const LTE = 'lte';
+
+/** @constant {string} TYPE The literal string "type" */
+const TYPE = 'type';
+
+/** @constant {string} AN_ The literal string "an " */
+const AN_ = 'an ';
+
+/** @constant {string} IS_ The literal string "is " */
+const IS_ = 'is ';
+
+/** @constant {string} _NOT_ The literal string " not " */
+const _NOT_ = ' not ';
+
+/** @constant {string} CANNOT_OPTIONS The literal string "cannot be validated, `options." */
+const CANNOT_OPTIONS = 'cannot be validated, `options.';
+
+/** @constant {string} TYPE_ The literal string "type " */
+const TYPE_ = TYPE + ' ';
+
 /** @constant {string} IS_AN_ARRAY The literal string "is an array" */
-const IS_AN_ARRAY = 'is an ' + ARRAY;
+const IS_AN_ARRAY = IS_ + AN_ + ARRAY;
 
 /** @constant {string} IS_NULL The literal string "is null" */
-const IS_NULL = 'is ' + NULL;
+const IS_NULL = IS_ + NULL;
 
-/** @constant {string} IS_TYPE The literal string "is type" */
-const IS_TYPE = 'is type ';
+/** @constant {string} IS_NAN The literal string "is the special `NaN` value" */
+const IS_NAN = IS_ + 'the special `NaN` value';
 
-/** @constant {string} NOT The literal string " not " */
-const NOT = ' not ';
+/** @constant {string} IS_TYPE_ The literal string "is type" */
+const IS_TYPE_ = IS_ + TYPE_;
+
+/** @constant {string} _IS_NOT_ The literal string " is not " */
+const _IS_NOT_ = ' is' + _NOT_;
+
+/** @constant {string} _NOT_TYPE_ The literal string " not type " */
+const _NOT_TYPE_ = _NOT_ + TYPE_;
 
 /**
  * ### Utilities used by many `ainta` functions.
@@ -116,6 +146,11 @@ const isRecognisedType = type => [
  */
 const quote = text => "'" + text + "'";
 
+/** @constant {string} QN The literal string "'number'" */
+const QN = quote(NUMBER);
+
+/** @constant {string} QS The literal string "'string'" */
+const QS = quote(STRING);
 
 /**
  * ### Truncates a string to 32 characters, and then uri-encodes it.
@@ -127,6 +162,39 @@ const quote = text => "'" + text + "'";
 const sanitise = text =>
     encodeURI(text.length <= 32 ? text
         : `${text.slice(0, 21)}...${text.slice(-8)}`);
+
+/**
+ * ### Validates an option which should be a number, eg `options.gte`.
+ * @private
+ *
+ * @param {string} key
+ *    The name of the option to validate, eg "gte".
+ * @param {any} val
+ *    The value of the option, which needs to be a number to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @param {string} [begin]
+ *    The optional `options.begin` value from the public `ainta` function.
+ * @param {string} [identifier]
+ *    The optional `identifier` argument from the public `ainta` function.
+ * @returns {undefined|string}
+ *    Returns undefined if `val` is valid, or an explanation if not.
+ */
+const validateOptionNumber = (key, val, has, begin, identifier) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QN
+            : isArray(val)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QN
+                : typeof val !== NUMBER
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
+                    : isNaN(val)
+                        ? IS_NAN
+                        : '';
+        if (result) return buildResultPrefix(begin, identifier) +
+            CANNOT_OPTIONS + key + '` ' + result;
+    }    
+};
 
 /**
  * ### A configuration object, used by all `ainta` functions.
@@ -198,8 +266,8 @@ function aintaArray(
     return buildResultPrefix(options.begin, identifier) + (
         value === null
             ? IS_NULL
-            : IS_TYPE + quote(typeof value)
-        ) + NOT + 'an ' + ARRAY
+            : IS_TYPE_ + quote(typeof value)
+        ) + _NOT_ + AN_ + ARRAY
     ;
 }
 
@@ -232,6 +300,7 @@ function aintaArray(
  *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if `options.type` is invalid.
  */
 function aintaType(
     value,
@@ -245,29 +314,28 @@ function aintaType(
     // Build the first part of an explanation.
     const prefix = buildResultPrefix(options.begin, identifier);
 
-    // If `options.type` is invalid, produce a helpful result.
-    const badOptionsType = prefix + 'cannot be validated, `options.type` ';
-    const notType = NOT + 'type ';
-    const qs = quote(STRING);
-    if (options.type === void 0)
-        return `${badOptionsType}is${NOT}set`;
-    if (options.type === null)
-        return badOptionsType + IS_NULL + notType + qs;
-    if (isArray(options.type))
-        return badOptionsType + IS_AN_ARRAY + notType + qs;
-    if (typeof options.type !== STRING)
-        return badOptionsType + IS_TYPE + quote(typeof options.type) + NOT + qs;
-    if (!isRecognisedType(options.type))
-        return badOptionsType + quote(sanitise(options.type)) + NOT + 'known';
+    // If `options.type` is invalid, return a helpful result.
+    const badOptionsType = prefix + CANNOT_OPTIONS + TYPE + '` ';
+    if (!(TYPE in options))
+        return `${badOptionsType}is${_NOT_}set`;
+    const optionsType = options.type;
+    if (optionsType === null)
+        return badOptionsType + IS_NULL + _NOT_TYPE_ + QS;
+    if (isArray(optionsType))
+        return badOptionsType + IS_AN_ARRAY + _NOT_TYPE_ + QS;
+    if (typeof optionsType !== STRING)
+        return badOptionsType + IS_TYPE_ + quote(typeof optionsType) + _NOT_ + QS;
+    if (!isRecognisedType(optionsType))
+        return badOptionsType + quote(sanitise(optionsType)) + _NOT_ + 'known';
 
     // Otherwise, generate an explanation of what went wrong.
     return prefix + (
         value === null
-            ? IS_NULL + notType
+            ? IS_NULL + _NOT_TYPE_
             : isArray(value)
-                ? IS_AN_ARRAY + notType
-                : IS_TYPE + quote(type) + NOT
-        ) + quote(options.type)
+                ? IS_AN_ARRAY + _NOT_TYPE_
+                : IS_TYPE_ + quote(type) + _NOT_
+        ) + quote(optionsType)
     ;
 }
 
@@ -346,8 +414,8 @@ function aintaNull(
     return buildResultPrefix(options.begin, identifier) + (
         isArray(value)
             ? IS_AN_ARRAY
-            : IS_TYPE + quote(typeof value)
-        ) + NOT + NULL
+            : IS_TYPE_ + quote(typeof value)
+        ) + _NOT_ + NULL
     ;
 }
 
@@ -380,6 +448,7 @@ function aintaNull(
  *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if any of the `options` it uses are invalid.
  */
 function aintaNumber(
     value,
@@ -391,24 +460,42 @@ function aintaNumber(
     let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that
-    // it doesn't consider `NaN` to be a number. At this point `typeof value` is
-    // 'number' but it could be `NaN`, so use `isNaN()` to check. Note that the
-    // newer `Number.isNaN()` is not necessary in this case.
-    result = isNaN(value)
-        ? 'is the special `NaN` value'
+    // If `options.gte` or `options.lte` is invalid, return a helpful result.
+    // Note that setting these to `undefined` may be useful in some cases, eg
+    // `{ gte:undefined }` as well as `{}`, so we don't use `"gte" in options`.
+    const { begin } = options;
+    const optionsGte = options.gte;
+    const hasGte = optionsGte !== void 0;
+    result = validateOptionNumber(GTE, optionsGte, hasGte, begin, identifier);
+    if (result) return result;
+    const optionsLte = options.lte;
+    const hasLte = optionsLte !== void 0;
+    result = validateOptionNumber(LTE, optionsLte, hasLte, begin, identifier);
+    if (result) return result;
 
-        // Compare `value` with the 'Greater Than or Equal' option, if present.
-        : 'gte' in options && options.gte > value
-            ? value + ' is not gte ' + options.gte
+    // If `options.gte` and `options.lte` are both being used, but `gte` is
+    // greater than `lte`, return a helpful result.
+    result = hasGte && hasLte && optionsGte > optionsLte
+        ? CANNOT_OPTIONS + 'gte` > `options.lte`'
 
-            // Compare `value` with the 'Less Than or Equal' option, if present.
-            : 'lte' in options && options.lte < value
-                ? value + ' is not lte ' + options.lte
-                : '';
+        // `aintaNumber()` differs from `aintaType(..., { type:'number' })`,
+        // in that it doesn't consider `NaN` to be a number. At this point,
+        // `typeof value` is 'number' but it could be `NaN`, so use `isNaN()`
+        // to check. Note that `Number.isNaN()` is not necessary in this case.
+        : isNaN(value)
+            ? IS_NAN
+
+            // Compare `value` with the 'Greater Than or Equal' option, if present.
+            : hasGte && optionsGte > value
+                ? value + _IS_NOT_ + GTE + ' ' + optionsGte
+
+                // Compare `value` with the 'Less Than or Equal' option, if present.
+                : hasLte && optionsLte < value
+                    ? value + _IS_NOT_ + LTE + ' ' + optionsLte
+                    : '';
 
     return result
-        ? buildResultPrefix(options.begin, identifier) + result
+        ? buildResultPrefix(begin, identifier) + result
         : false;
 }
 

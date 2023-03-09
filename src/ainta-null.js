@@ -1,7 +1,7 @@
 import {
+    _NOT_,
     IS_AN_ARRAY,
-    IS_TYPE,
-    NOT,
+    IS_TYPE_,
     NULL,
 } from './constants.js';
 import { buildResultPrefix, isArray, quote } from './helpers.js';
@@ -46,8 +46,8 @@ export default function aintaNull(
     return buildResultPrefix(options.begin, identifier) + (
         isArray(value)
             ? IS_AN_ARRAY
-            : IS_TYPE + quote(typeof value)
-        ) + NOT + NULL
+            : IS_TYPE_ + quote(typeof value)
+        ) + _NOT_ + NULL
     ;
 }
 
@@ -112,6 +112,6 @@ export function aintaNullTest(f) {
     // In fact, `options.type` is ignored, even if it's a valid type.
     equal(f(null, 'null', { type:'number' }),
         false);
-    equal(f(99.999, 'Nearly one hundred', { type:'number' }),
-        "`Nearly one hundred` is type 'number' not null");
+    equal(f(NaN, 'not a number', { type:'number' }), // no mention of the special `NaN` value
+        "`not a number` is type 'number' not null");
 }

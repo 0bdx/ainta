@@ -1,7 +1,14 @@
 import {
+    _NOT_,
+    _NOT_TYPE_,
     BIGINT,
     BOOLEAN,
+    CANNOT_OPTIONS,
     FUNCTION,
+    IS_AN_ARRAY,
+    IS_NAN,
+    IS_NULL,
+    IS_TYPE_,
     NUMBER,
     OBJECT,
     STRING,
@@ -71,6 +78,11 @@ export const isRecognisedType = type => [
  */
 export const quote = text => "'" + text + "'";
 
+/** @constant {string} QN The literal string "'number'" */
+export const QN = quote(NUMBER);
+
+/** @constant {string} QS The literal string "'string'" */
+export const QS = quote(STRING);
 
 /**
  * ### Truncates a string to 32 characters, and then uri-encodes it.
@@ -82,3 +94,36 @@ export const quote = text => "'" + text + "'";
 export const sanitise = text =>
     encodeURI(text.length <= 32 ? text
         : `${text.slice(0, 21)}...${text.slice(-8)}`)
+
+/**
+ * ### Validates an option which should be a number, eg `options.gte`.
+ * @private
+ *
+ * @param {string} key
+ *    The name of the option to validate, eg "gte".
+ * @param {any} val
+ *    The value of the option, which needs to be a number to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @param {string} [begin]
+ *    The optional `options.begin` value from the public `ainta` function.
+ * @param {string} [identifier]
+ *    The optional `identifier` argument from the public `ainta` function.
+ * @returns {undefined|string}
+ *    Returns undefined if `val` is valid, or an explanation if not.
+ */
+export const validateOptionNumber = (key, val, has, begin, identifier) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QN
+            : isArray(val)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QN
+                : typeof val !== NUMBER
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
+                    : isNaN(val)
+                        ? IS_NAN
+                        : '';
+        if (result) return buildResultPrefix(begin, identifier) +
+            CANNOT_OPTIONS + key + '` ' + result;
+    }    
+};

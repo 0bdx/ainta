@@ -143,6 +143,7 @@ export function aintaNull(value: any, identifier?: string, options?: any): false
  *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if any of the `options` it uses are invalid.
  */
 export function aintaNumber(value: any, identifier?: string, options?: any): false | string;
 /**
@@ -174,6 +175,7 @@ export function aintaNumber(value: any, identifier?: string, options?: any): fal
  *    The standard `ainta` configuration object (optional, defaults to `{}`)
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if `options.type` is invalid.
  */
 export function aintaType(value: any, identifier?: string, options?: any): false | string;
 /** Any one of `ainta`'s validation functions.
