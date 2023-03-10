@@ -1,5 +1,6 @@
 import {
     _NOT_,
+    _NOT_AN_ARRAY,
     _NOT_TYPE_,
     BIGINT,
     BOOLEAN,
@@ -96,13 +97,35 @@ export const sanitise = text =>
         : `${text.slice(0, 21)}...${text.slice(-8)}`)
 
 /**
+ * ### Validates an option which should be an array of unique strings.
+ * @private
+ *
+ * @param {any} val
+ *    The value of the option, which must be an array of strings to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns undefined if `val` is valid, or an explanation if not.
+ */
+export const validateEnumOption = (val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_AN_ARRAY
+            : !isArray(val)
+                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+                : '';
+        if (result) return CANNOT_OPTIONS + 'enum` ' + result;
+    }    
+};
+
+/**
  * ### Validates an option which should be a number, eg `options.gte`.
  * @private
  *
  * @param {string} key
  *    The name of the option to validate, eg "gte".
  * @param {any} val
- *    The value of the option, which needs to be a number to be valid.
+ *    The value of the option, which must be a number to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  * @param {boolean} [cannotBeZero]
@@ -124,5 +147,29 @@ export const validateNumericOption = (key, val, has, cannotBeZero) => {
                             ? 'is zero'
                             : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
+    }    
+};
+
+/**
+ * ### Validates an option which should be an object with a `test()` function.
+ * @private
+ *
+ * @param {any} val
+ *    The value of the option, which must be an object to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ */
+export const validateRxishOption = (val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QN
+            : isArray(val)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QN
+                : typeof val !== NUMBER
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
+                    : isNaN(val)
+                        ? IS_NAN
+                        : '';
+        if (result) return CANNOT_OPTIONS + 'rx` ' + result;
     }    
 };

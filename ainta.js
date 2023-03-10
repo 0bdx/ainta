@@ -48,6 +48,15 @@ const GTE = 'gte';
 /** @constant {string} LTE The literal string "lte" */
 const LTE = 'lte';
 
+/** @constant {string} MAX The literal string "max" */
+const MAX = 'max';
+
+/** @constant {string} MIN The literal string "min" */
+const MIN = 'min';
+
+/** @constant {string} MOD The literal string "mod" */
+const MOD = 'mod';
+
 /** @constant {string} TYPE The literal string "type" */
 const TYPE = 'type';
 
@@ -80,6 +89,9 @@ const IS_TYPE_ = IS_ + TYPE_;
 
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 const _IS_NOT_ = ' is' + _NOT_;
+
+/** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
+const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
 
 /** @constant {string} _NOT_TYPE_ The literal string " not type " */
 const _NOT_TYPE_ = _NOT_ + TYPE_;
@@ -164,23 +176,69 @@ const sanitise = text =>
         : `${text.slice(0, 21)}...${text.slice(-8)}`);
 
 /**
+ * ### Validates an option which should be an array of unique strings.
+ * @private
+ *
+ * @param {any} val
+ *    The value of the option, which must be an array of strings to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns undefined if `val` is valid, or an explanation if not.
+ */
+const validateEnumOption = (val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_AN_ARRAY
+            : !isArray(val)
+                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+                : '';
+        if (result) return CANNOT_OPTIONS + 'enum` ' + result;
+    }    
+};
+
+/**
  * ### Validates an option which should be a number, eg `options.gte`.
  * @private
  *
  * @param {string} key
  *    The name of the option to validate, eg "gte".
  * @param {any} val
- *    The value of the option, which needs to be a number to be valid.
+ *    The value of the option, which must be a number to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
- * @param {string} [begin]
- *    The optional `options.begin` value from the public `ainta` function.
- * @param {string} [identifier]
- *    The optional `identifier` argument from the public `ainta` function.
+ * @param {boolean} [cannotBeZero]
+ *    An optional flag which, if set to `true`, prevents `val` from being zero.
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-const validateNumericOption = (key, val, has, begin, identifier) => {
+const validateNumericOption = (key, val, has, cannotBeZero) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QN
+            : isArray(val)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QN
+                : typeof val !== NUMBER
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
+                    : isNaN(val)
+                        ? IS_NAN
+                        : cannotBeZero && !val
+                            ? 'is zero'
+                            : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+    }    
+};
+
+/**
+ * ### Validates an option which should be an object with a `test()` function.
+ * @private
+ *
+ * @param {any} val
+ *    The value of the option, which must be an object to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ */
+const validateRxishOption = (val, has) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_TYPE_ + QN
@@ -191,8 +249,7 @@ const validateNumericOption = (key, val, has, begin, identifier) => {
                     : isNaN(val)
                         ? IS_NAN
                         : '';
-        if (result) return buildResultPrefix(begin, identifier) +
-            CANNOT_OPTIONS + key + '` ' + result;
+        if (result) return CANNOT_OPTIONS + 'rx` ' + result;
     }    
 };
 
@@ -202,19 +259,38 @@ const validateNumericOption = (key, val, has, begin, identifier) => {
  * Each option is actually optional, so an empty object `{}` is perfectly valid.
  * 
  * Different options are used by different `ainta` functions. For example:
- * - `options.keys` is only used by `aintaEnum()`
- * - `options.gte` is only used by `aintaNumber()` and `aintaInteger()`
  * - `options.before` is used all the `ainta` functions
+ * - `options.enum` is only used by `aintaString()` and `aintaArray()`
+ * - `options.gte` is only used by `aintaNumber()`
  *
  * @typedef {Object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
+ * @property {string[]} [enum]
+ *    Optional array of strings. TODO discuss
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
  * @property {number} [lte]
  *    Optional maximum value. Short for 'Less Than or Equal'.
+ * @property {number} [max]
+ *    Optional maximum length of a string. TODO or array?
+ * @property {number} [min]
+ *    Optional minimum length of a string. TODO or array?
+ * @property {number} [mod]
+ *    Optional modulo which `value` must divide into without a remainder.
+ * @property {Rxish} [rx]
+ *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
+ */
+
+/**
+ * ### An object with a `test()` function. Typically a JavaScript `RegExp`.
+ * 
+ * @typedef {Object} Rxish
+ * @property {function(string):boolean} test
+ *    The test function, which takes a string and returns `true` if it passes
+ *    and `false` if it fails.
  */
 
 /**
@@ -267,7 +343,7 @@ function aintaArray(
         value === null
             ? IS_NULL
             : IS_TYPE_ + quote(typeof value)
-        ) + _NOT_ + AN_ + ARRAY
+        ) + _NOT_AN_ARRAY
     ;
 }
 
@@ -278,10 +354,15 @@ function aintaArray(
  * `option.type`, it returns a short explanation of what went wrong. Otherwise
  * it returns `false`.
  *
- * Due to the way `typeof` works, these are all valid, so return `false`:
+ * Due to the way `typeof` works, these cases are all valid, so return `false`:
  * - `aintaType(null, { type:'object' })`
  * - `aintaType([99], { type:'object' })`
  * - `aintaType(NaN, { type:'number' })`
+ * 
+ * To avoid returning `false` in these cases, use these functions instead:
+ * - `aintaObject(null)`
+ * - `aintaObject([99])`
+ * - `aintaNumber(NaN)`
  *
  * @example
  * import { aintaType } from '@0bdx/ainta';
@@ -423,10 +504,18 @@ function aintaNull(
  * ### Validates a number.
  *
  * If the first argument passed to `aintaNumber()` ain't a number, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.lte` - if set, the value must be Less Than or Equal to this
+ * - `options.mod` - if set, the value must be divisible by this
+ * 
+ * Otherwise, `aintaNumber()` returns `false`.
  * 
  * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
- * doesn't consider `NaN` to be a number
+ * doesn't consider `NaN` to be a number.
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
@@ -437,8 +526,8 @@ function aintaNull(
  * aintaNumber(NaN);
  * // "A value is the special `NaN` value"
  *
- * aintaNumber('99', 'redBalloons', { begin:'flyBalloons()' });
- * // "flyBalloons(): `redBalloons` is type 'string' not 'number'"
+ * aintaNumber('99', 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'string' not 'number'"
  *
  * @param {any} value
  *    The value to validate.
@@ -460,22 +549,23 @@ function aintaNumber(
     let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // If `options.gte` or `options.lte` is invalid, return a helpful result.
-    // Note that setting these to `undefined` may be useful in some cases, eg
-    // `{ gte:undefined }` as well as `{}`, so we don't use `"gte" in options`.
-    const { begin } = options;
+    // If `options.gte`, `.lte` or `.mod` are invalid, return a helpful result.
+    // Note that setting these to `undefined` may be useful in some cases, so
+    // that `{ gte:undefined }` acts the same way as `{}`, which is why we use
+    // `options.gte !== undefined` instead of `"gte" in options`.
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
-    result = validateNumericOption(GTE, optionsGte, hasGte, begin, identifier);
-    if (result) return result;
     const optionsLte = options.lte;
     const hasLte = optionsLte !== void 0;
-    result = validateNumericOption(LTE, optionsLte, hasLte, begin, identifier);
-    if (result) return result;
+    const optionsMod = options.mod;
+    const hasMod = optionsMod !== void 0;
+    result = validateNumericOption(GTE, optionsGte, hasGte)
+     || validateNumericOption(LTE, optionsLte, hasLte)
+     || validateNumericOption(MOD, optionsMod, hasMod, true)
 
     // If `options.gte` and `options.lte` are both being used, but `gte` is
     // greater than `lte`, return a helpful result.
-    result = hasGte && hasLte && optionsGte > optionsLte
+     || (hasGte && hasLte && optionsGte > optionsLte
         ? CANNOT_OPTIONS + 'gte` > `options.lte`'
 
         // `aintaNumber()` differs from `aintaType(..., { type:'number' })`,
@@ -485,17 +575,114 @@ function aintaNumber(
         : isNaN(value)
             ? IS_NAN
 
-            // Compare `value` with the 'Greater Than or Equal' option, if present.
+            // Compare `value` with the 'Greater Than or Equal' option, if set.
             : hasGte && optionsGte > value
                 ? value + _IS_NOT_ + GTE + ' ' + optionsGte
 
-                // Compare `value` with the 'Less Than or Equal' option, if present.
+                // Compare `value` with the 'Less Than or Equal' option, if set.
                 : hasLte && optionsLte < value
                     ? value + _IS_NOT_ + LTE + ' ' + optionsLte
-                    : '';
+
+                    // Test if `value` divides by the 'modulo' option, if set.
+                    : hasMod && (value % optionsMod)
+                        ? value + ' is not divisible by ' + optionsMod
+                        : ''
+    );
 
     return result
-        ? buildResultPrefix(begin, identifier) + result
+        ? buildResultPrefix(options.begin, identifier) + result
+        : false;
+}
+
+/**
+ * ### Validates a string.
+ *
+ * If the first argument passed to `aintaString()` ain't a string, it returns
+ * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.enum` - if set, this is an array of valid strings
+ * - `options.max` - if set, this is the maximum allowed string length
+ * - `options.min` - if set, this is the minimum allowed string length
+ * - `options.rx` - if set, this is an object which has a `test()` function
+ * 
+ * Otherwise, `aintaString()` returns `false`.
+ *
+ * @example
+ * import { aintaString } from '@0bdx/ainta';
+ * 
+ * aintaString("Ok!");
+ * // false
+ *
+ * aintaString(["N","o","p","e"]);
+ * // "A value is an array not type 'string'"
+ *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if any of the `options` it uses are invalid.
+ */
+function aintaString(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Use aintaType() to check whether `typeof value` is 'string'.
+    // If not, bail out right away.
+    let result = aintaType(value, identifier, { ...options, type:STRING });
+    if (result) return result;
+
+    // If `options.enum`, `.max`, `.min` or `.rx` are invalid, return a
+    // helpful result. Note that setting these to `undefined` may be useful in
+    // some cases, so that `{ max:undefined }` acts the same way as `{}`, which
+    // is why we use `options.max !== undefined` instead of `"max" in options`.
+    const optionsEnum = options.enum;
+    const hasEnum = optionsEnum !== void 0;
+    const optionsMax = options.max;
+    const hasMax = optionsMax !== void 0;
+    const optionsMin = options.min;
+    const hasMin = optionsMin !== void 0;
+    const optionsRx = options.rx;
+    const hasRx = optionsRx !== void 0;
+    result = validateEnumOption(optionsEnum, hasEnum)
+     || validateNumericOption(MAX, optionsMax, hasMax)
+     || validateNumericOption(MIN, optionsMin, hasMin)
+     || validateRxishOption(optionsRx, hasRx)
+
+    // If `options.max` and `options.min` are both being used, but `max` is
+    // less than `min`, return a helpful result.
+     || (hasMax && hasMin && optionsMax < optionsMin
+        ? CANNOT_OPTIONS + 'max` < `options.min`'
+
+        // Xx.
+        : hasEnum && optionsEnum.indexOf(value) == -1
+            ? 'enum issue @TODO'
+
+            // Check that `value` is not longer than the 'max' option, if set.
+            : hasMax && optionsMax < value.length
+                ? value + _IS_NOT_ + MAX + ' ' + optionsMax
+
+                // Check that `value` is not shorter than 'min' option, if set.
+                : hasMin && optionsMin > value.length
+                    ? value + _IS_NOT_ + MIN + ' ' + optionsMin
+
+                    // Test if `value` passes the 'RegExp' option, if set.
+                    : hasRx && !optionsRx.test(value)
+                        ? value + ' fails ' + optionsRx
+                        : ''
+    );
+
+    return result
+        ? buildResultPrefix(options.begin, identifier) + result
         : false;
 }
 
@@ -585,4 +772,4 @@ const narrowAinta = (options, ainta, results) =>
         return result;
     };
 
-export { aintaArray, aintaBoolean, aintaNull, aintaNumber, aintaType, narrowAintas as default };
+export { aintaArray, aintaBoolean, aintaNull, aintaNumber, aintaString, aintaType, narrowAintas as default };

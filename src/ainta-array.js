@@ -1,7 +1,6 @@
 import {
     _NOT_,
-    AN_,
-    ARRAY,
+    _NOT_AN_ARRAY,
     IS_NULL,
     IS_TYPE_,
 } from './constants.js';
@@ -48,7 +47,7 @@ export default function aintaArray(
         value === null
             ? IS_NULL
             : IS_TYPE_ + quote(typeof value)
-        ) + _NOT_ + AN_ + ARRAY
+        ) + _NOT_AN_ARRAY
     ;
 }
 

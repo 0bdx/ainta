@@ -8,15 +8,19 @@ export type Ainta = (arg0: any, arg1: string | null, arg2: any | null) => string
  * Each option is actually optional, so an empty object `{}` is perfectly valid.
  *
  * Different options are used by different `ainta` functions. For example:
- * - `options.keys` is only used by `aintaEnum()`
- * - `options.gte` is only used by `aintaNumber()` and `aintaInteger()`
  * - `options.before` is used all the `ainta` functions
+ * - `options.enum` is only used by `aintaString()` and `aintaArray()`
+ * - `options.gte` is only used by `aintaNumber()`
  */
 export type Options = {
     /**
      * Optional text to begin the result with, eg a function name like "isOk()".
      */
     begin?: string;
+    /**
+     * Optional array of strings. TODO discuss
+     */
+    enum?: string[];
     /**
      * Optional minimum value. Short for 'Greater Than or Equal'.
      */
@@ -26,9 +30,35 @@ export type Options = {
      */
     lte?: number;
     /**
+     * Optional maximum length of a string. TODO or array?
+     */
+    max?: number;
+    /**
+     * Optional minimum length of a string. TODO or array?
+     */
+    min?: number;
+    /**
+     * Optional modulo which `value` must divide into without a remainder.
+     */
+    mod?: number;
+    /**
+     * Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+     */
+    rx?: Rxish;
+    /**
      * Optional JavaScript type to expect, eg "boolean" or "undefined".
      */
     type?: 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
+};
+/**
+ * ### An object with a `test()` function. Typically a JavaScript `RegExp`.
+ */
+export type Rxish = {
+    /**
+     *    The test function, which takes a string and returns `true` if it passes
+     *    and `false` if it fails.
+     */
+    test: (arg0: string) => boolean;
 };
 /**
  * ### Validates a value using JavaScript's native `Array.isArray()`.
@@ -118,10 +148,18 @@ export function aintaNull(value: any, identifier?: string, options?: any): false
  * ### Validates a number.
  *
  * If the first argument passed to `aintaNumber()` ain't a number, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
+ *
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.lte` - if set, the value must be Less Than or Equal to this
+ * - `options.mod` - if set, the value must be divisible by this
+ *
+ * Otherwise, `aintaNumber()` returns `false`.
  *
  * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
- * doesn't consider `NaN` to be a number
+ * doesn't consider `NaN` to be a number.
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
@@ -132,8 +170,8 @@ export function aintaNull(value: any, identifier?: string, options?: any): false
  * aintaNumber(NaN);
  * // "A value is the special `NaN` value"
  *
- * aintaNumber('99', 'redBalloons', { begin:'flyBalloons()' });
- * // "flyBalloons(): `redBalloons` is type 'string' not 'number'"
+ * aintaNumber('99', 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'string' not 'number'"
  *
  * @param {any} value
  *    The value to validate.
@@ -147,16 +185,59 @@ export function aintaNull(value: any, identifier?: string, options?: any): false
  */
 export function aintaNumber(value: any, identifier?: string, options?: any): false | string;
 /**
+ * ### Validates a string.
+ *
+ * If the first argument passed to `aintaString()` ain't a string, it returns
+ * a short explanation of what went wrong.
+ *
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.enum` - if set, this is an array of valid strings
+ * - `options.max` - if set, this is the maximum allowed string length
+ * - `options.min` - if set, this is the minimum allowed string length
+ * - `options.rx` - if set, this is an object which has a `test()` function
+ *
+ * Otherwise, `aintaString()` returns `false`.
+ *
+ * @example
+ * import { aintaString } from '@0bdx/ainta';
+ *
+ * aintaString("Ok!");
+ * // false
+ *
+ * aintaString(["N","o","p","e"]);
+ * // "A value is an array not type 'string'"
+ *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if any of the `options` it uses are invalid.
+ */
+export function aintaString(value: any, identifier?: string, options?: any): false | string;
+/**
  * ### Validates a value using JavaScript's native `typeof`.
  *
  * If the `typeof` the first argument passed to `aintaType()` ain't
  * `option.type`, it returns a short explanation of what went wrong. Otherwise
  * it returns `false`.
  *
- * Due to the way `typeof` works, these are all valid, so return `false`:
+ * Due to the way `typeof` works, these cases are all valid, so return `false`:
  * - `aintaType(null, { type:'object' })`
  * - `aintaType([99], { type:'object' })`
  * - `aintaType(NaN, { type:'number' })`
+ *
+ * To avoid returning `false` in these cases, use these functions instead:
+ * - `aintaObject(null)`
+ * - `aintaObject([99])`
+ * - `aintaNumber(NaN)`
  *
  * @example
  * import { aintaType } from '@0bdx/ainta';

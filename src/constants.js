@@ -36,14 +36,26 @@ export const SYMBOL = 'symbol';
 /** @constant {string} UNDEFINED The literal string "undefined" */
 export const UNDEFINED = 'undefined';
 
+/** @constant {string} ENUM The literal string "enum" */
+export const ENUM = 'enum';
+
 /** @constant {string} GTE The literal string "gte" */
 export const GTE = 'gte';
 
 /** @constant {string} LTE The literal string "lte" */
 export const LTE = 'lte';
 
+/** @constant {string} MAX The literal string "max" */
+export const MAX = 'max';
+
+/** @constant {string} MIN The literal string "min" */
+export const MIN = 'min';
+
 /** @constant {string} MOD The literal string "mod" */
 export const MOD = 'mod';
+
+/** @constant {string} RX The literal string "rx" */
+export const RX = 'rx';
 
 /** @constant {string} TYPE The literal string "type" */
 export const TYPE = 'type';
@@ -77,6 +89,9 @@ export const IS_TYPE_ = IS_ + TYPE_;
 
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 export const _IS_NOT_ = ' is' + _NOT_;
+
+/** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
+export const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
 
 /** @constant {string} _NOT_TYPE_ The literal string " not type " */
 export const _NOT_TYPE_ = _NOT_ + TYPE_;
