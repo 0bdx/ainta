@@ -88,6 +88,14 @@ export function aintaBooleanTest(f) {
     equal(f(NaN, 'num', { begin:['a','b','c'] }),
         "a,b,c: `num` is type 'number' not 'boolean'");
 
+    // Invalid `options.lte` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(!0, 'lte test', { lte:false }),
+        false);
+    // @ts-expect-error
+    equal(f(/123/.test, 'lte test', { lte:false }),
+        "`lte test` is type 'function' not 'boolean'");
+
     // Invalid `options.type` is a TS error, but does not prevent normal use.
     // @ts-expect-error
     equal(f(false, 'no', { type:String }),

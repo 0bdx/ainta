@@ -101,6 +101,14 @@ export function aintaNullTest(f) {
     equal(f({}, '--', { begin:77 }),
         "77: `--` is type 'object' not null");
 
+    // Invalid `options.mod` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(null, void 0, { begin:'mod test', mod:'123' }),
+        false);
+    // @ts-expect-error
+    equal(f(Symbol('a'), void 0, { begin:'mod test', mod:'123' }),
+        "mod test: A value is type 'symbol' not null");
+
     // Invalid `options.type` is a TS error, but does not prevent normal use.
     // @ts-expect-error
     equal(f(null, undefined, { type:100 }),

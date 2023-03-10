@@ -5,19 +5,28 @@ import {
     GTE,
     IS_NAN,
     LTE,
+    MOD,
     NUMBER,
 } from './constants.js';
-import { buildResultPrefix, validateOptionNumber } from './helpers.js';
+import { buildResultPrefix, validateNumericOption } from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
  * ### Validates a number.
  *
  * If the first argument passed to `aintaNumber()` ain't a number, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.lte` - if set, the value must be Less Than or Equal to this
+ * - `options.mod` - if set, the value must be divisible by this
+ * 
+ * Otherwise, `aintaNumber()` returns `false`.
  * 
  * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
- * doesn't consider `NaN` to be a number
+ * doesn't consider `NaN` to be a number.
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
@@ -28,8 +37,8 @@ import emptyOptions from './options.js';
  * aintaNumber(NaN);
  * // "A value is the special `NaN` value"
  *
- * aintaNumber('99', 'redBalloons', { begin:'flyBalloons()' });
- * // "flyBalloons(): `redBalloons` is type 'string' not 'number'"
+ * aintaNumber('99', 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'string' not 'number'"
  *
  * @param {any} value
  *    The value to validate.
@@ -51,22 +60,23 @@ export default function aintaNumber(
     let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // If `options.gte` or `options.lte` is invalid, return a helpful result.
-    // Note that setting these to `undefined` may be useful in some cases, eg
-    // `{ gte:undefined }` as well as `{}`, so we don't use `"gte" in options`.
-    const { begin } = options;
+    // If `options.gte`, `.lte` or `.mod` are invalid, return a helpful result.
+    // Note that setting these to `undefined` may be useful in some cases, so
+    // that `{ gte:undefined }` acts the same way as `{}`, which is why we use
+    // `options.gte !== undefined` instead of `"gte" in options`.
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
-    result = validateOptionNumber(GTE, optionsGte, hasGte, begin, identifier);
-    if (result) return result;
     const optionsLte = options.lte;
     const hasLte = optionsLte !== void 0;
-    result = validateOptionNumber(LTE, optionsLte, hasLte, begin, identifier);
-    if (result) return result;
+    const optionsMod = options.mod;
+    const hasMod = optionsMod !== void 0;
+    result = validateNumericOption(GTE, optionsGte, hasGte)
+     || validateNumericOption(LTE, optionsLte, hasLte)
+     || validateNumericOption(MOD, optionsMod, hasMod, true)
 
     // If `options.gte` and `options.lte` are both being used, but `gte` is
     // greater than `lte`, return a helpful result.
-    result = hasGte && hasLte && optionsGte > optionsLte
+     || (hasGte && hasLte && optionsGte > optionsLte
         ? CANNOT_OPTIONS + 'gte` > `options.lte`'
 
         // `aintaNumber()` differs from `aintaType(..., { type:'number' })`,
@@ -76,17 +86,22 @@ export default function aintaNumber(
         : isNaN(value)
             ? IS_NAN
 
-            // Compare `value` with the 'Greater Than or Equal' option, if present.
+            // Compare `value` with the 'Greater Than or Equal' option, if set.
             : hasGte && optionsGte > value
                 ? value + _IS_NOT_ + GTE + ' ' + optionsGte
 
-                // Compare `value` with the 'Less Than or Equal' option, if present.
+                // Compare `value` with the 'Less Than or Equal' option, if set.
                 : hasLte && optionsLte < value
                     ? value + _IS_NOT_ + LTE + ' ' + optionsLte
-                    : '';
+
+                    // Test if `value` divides by the 'modulo' option, if set.
+                    : hasMod && (value % optionsMod)
+                        ? value + ' is not divisible by ' + optionsMod
+                        : ''
+    );
 
     return result
-        ? buildResultPrefix(begin, identifier) + result
+        ? buildResultPrefix(options.begin, identifier) + result
         : false;
 }
 
@@ -105,7 +120,7 @@ export function aintaNumberTest(f) {
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
 
     // Invalid `options.gte` produces a helpful result.
-    equal(f(1, 'one', { gte:null }),
+    equal(f(1, 'one', { gte:null, lte:null }), // the `lte` error is ignored
         "`one` cannot be validated, `options.gte` is null not type 'number'");
     // @ts-expect-error
     equal(f(2, undefined, { gte:[] }),
@@ -120,12 +135,12 @@ export function aintaNumberTest(f) {
     equal(f(1, 'one', { begin:'Lte', lte:null }),
         "Lte: `one` cannot be validated, `options.lte` is null not type 'number'");
     // @ts-expect-error
-    equal(f(2, undefined, { lte:[] }),
+    equal(f(2, undefined, { lte:[], mod:false }), // the `mod` error is ignored
         "A value cannot be validated, `options.lte` is an array not type 'number'");
     // @ts-expect-error
     equal(f(3, null, { begin:'Three', lte:Symbol('abc') }),
         "Three: A value cannot be validated, `options.lte` is type 'symbol' not 'number'");
-    equal(f(4, 'nope', { lte:NaN }),
+    equal(f(4, 'nope', { lte:NaN, mod:0 }), // the `mod` error is ignored
         "`nope` cannot be validated, `options.lte` is the special `NaN` value");
 
     // Invalid combination of `options.gte` and `options.lte` produces a helpful result.
@@ -134,7 +149,21 @@ export function aintaNumberTest(f) {
     equal(f(6, '', { begin:'impossible range', gte:Infinity, lte:-Infinity }),
         "impossible range: A value cannot be validated, `options.gte` > `options.lte`");
 
-    // Typical usage without `options.gte` or `options.lte`.
+    // Invalid `options.mod` produces a helpful result.
+    equal(f(1, 'one', { begin:'%', mod:null }),
+        "%: `one` cannot be validated, `options.mod` is null not type 'number'");
+    // @ts-expect-error
+    equal(f(2, 'two', { mod:[] }),
+        "`two` cannot be validated, `options.mod` is an array not type 'number'");
+    // @ts-expect-error
+    equal(f(3, null, { begin:'Three', mod:Boolean(0) }),
+        "Three: A value cannot be validated, `options.mod` is type 'boolean' not 'number'");
+    equal(f(4, void 0, { mod:NaN }),
+        "A value cannot be validated, `options.mod` is the special `NaN` value");
+    equal(f(5, 'five', { mod:0 }),
+        "`five` cannot be validated, `options.mod` is zero");
+
+    // Typical usage without `options.gte`, `.lte` or `.mod`.
     equal(f(-Infinity),
         false);
     equal(f(5.5e5, null, { begin:'Number Test' }),
@@ -202,6 +231,54 @@ export function aintaNumberTest(f) {
     equal(f(5.001, null, { gte:5, lte:5 }),
         "A value 5.001 is not lte 5");
 
+    // Typical `options.mod` usage.
+    equal(f(1, null, { mod:5 }),
+        "A value 1 is not divisible by 5");
+    equal(f(5, null, { mod:5 }),
+        false);
+    equal(f(0b101, 'binary', { mod:0b10 }),
+        "`binary` 5 is not divisible by 2");
+    equal(f(0b100, 'binary', { mod:0b10 }),
+        false);
+    equal(f(-54.9999, null, { begin:'Number Test', mod:55.5 }),
+        "Number Test: A value -54.9999 is not divisible by 55.5");
+    equal(f(-55.5, null, { begin:'Number Test', mod:55.5 }),
+        false);
+    equal(f(2 * 10e-3, '2%', { begin:'percent()', mod:3 * 10e-3 }),
+        "percent(): `2%` 0.02 is not divisible by 0.03");
+    equal(f(Number(false), '0%', { begin:'percent()', mod:10e-3 }),
+        false);
+
+    // Using `options.gte` and `options.mod` together.
+    equal(f(5, null, { gte:8, mod:5 }),
+        "A value 5 is not gte 8");
+    equal(f(8, null, { gte:8, mod:5 }),
+        "A value 8 is not divisible by 5");
+    equal(f(10, null, { gte:8, mod:5 }),
+        false);
+
+    // Using `options.gte` and `options.mod` together.
+    equal(f(5, 'integer', { begin:'>', lte:1, mod:1 }),
+        ">: `integer` 5 is not lte 1");
+    equal(f(0.5, 'integer', { begin:'>', lte:1, mod:1 }),
+        ">: `integer` 0.5 is not divisible by 1");
+    equal(f(-5, 'integer', { begin:'>', lte:1, mod:1 }),
+        false);
+
+    // Using `options.gte`, `.lte` and `.mod` together.
+    equal(f(0, 'impossible', { gte:1, lte:2, mod:3 }),
+        "`impossible` 0 is not gte 1");
+    equal(f(3, 'impossible', { gte:1, lte:2, mod:3 }),
+        "`impossible` 3 is not lte 2");
+    equal(f(1.5, 'impossible', { gte:1, lte:2, mod:3 }),
+        "`impossible` 1.5 is not divisible by 3");
+    equal(f(0, '', { begin:'possible', gte:1, lte:4, mod:3 }),
+        "possible: A value 0 is not gte 1");
+    equal(f(6, '', { begin:'possible', gte:1, lte:4, mod:3 }),
+        "possible: A value 6 is not lte 4");
+    equal(f(3,'', { begin:'possible', gte:1, lte:4, mod:3 }),
+        false);
+
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error
     equal(f(Number('0'), "Number('0')", { begin:'Number Test', foo:'bar' }),
@@ -218,11 +295,19 @@ export function aintaNumberTest(f) {
     equal(f(NaN, '1%', { begin:['a','b','c'] }),
         "a,b,c: `1%` is the special `NaN` value");
 
-    // `options.gte` is ignored if it's set to `undefined`.
-    equal(f(0, 'z', { gte:void 0 }),
+    // `options.gte`, `.lte` and `.mod` are ignored if set to `undefined`.
+    equal(f(0, 'gte', { gte:void 0 }),
         false);
-    equal(f('', 'z', { gte:void 0 }),
-        "`z` is type 'string' not 'number'");
+    equal(f('', 'gte', { gte:void 0 }),
+        "`gte` is type 'string' not 'number'");
+    equal(f(0, 'lte', { lte:undefined }),
+        false);
+    equal(f(NaN, 'lte', { lte:undefined }),
+        "`lte` is the special `NaN` value");
+    equal(f(0, 'mod', { gte:0, mod:({}).nope }),
+        false);
+    equal(f(-0.001, 'mod', { gte:0, mod:({}).nope }),
+        "`mod` -0.001 is not gte 0");
 
     // Invalid `options.type` is a TS error, but does not prevent normal use.
     // @ts-expect-error

@@ -105,14 +105,12 @@ export const sanitise = text =>
  *    The value of the option, which needs to be a number to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
- * @param {string} [begin]
- *    The optional `options.begin` value from the public `ainta` function.
- * @param {string} [identifier]
- *    The optional `identifier` argument from the public `ainta` function.
+ * @param {boolean} [cannotBeZero]
+ *    An optional flag which, if set to `true`, prevents `val` from being zero.
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-export const validateOptionNumber = (key, val, has, begin, identifier) => {
+export const validateNumericOption = (key, val, has, cannotBeZero) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_TYPE_ + QN
@@ -122,8 +120,9 @@ export const validateOptionNumber = (key, val, has, begin, identifier) => {
                     ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
                     : isNaN(val)
                         ? IS_NAN
-                        : '';
-        if (result) return buildResultPrefix(begin, identifier) +
-            CANNOT_OPTIONS + key + '` ' + result;
+                        : cannotBeZero && !val
+                            ? 'is zero'
+                            : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
     }    
 };

@@ -102,6 +102,14 @@ export function aintaArrayTest(f) {
     equal(f(Array.constructor, undefined, { begin:77 }),
         "77: A value is type 'function' not an array");
 
+    // Invalid `options.gte` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(''.split(','), null, { gte:[] }),
+        false);
+    // @ts-expect-error
+    equal(f(/123/, null, { gte:[] }),
+        "A value is type 'object' not an array");
+
     // Invalid `options.type` is a TS error, but does not prevent normal use.
     // @ts-expect-error
     equal(f([], undefined, { type:100 }),

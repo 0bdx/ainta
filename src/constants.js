@@ -42,6 +42,9 @@ export const GTE = 'gte';
 /** @constant {string} LTE The literal string "lte" */
 export const LTE = 'lte';
 
+/** @constant {string} MOD The literal string "mod" */
+export const MOD = 'mod';
+
 /** @constant {string} TYPE The literal string "type" */
 export const TYPE = 'type';
 

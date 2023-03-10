@@ -15,6 +15,8 @@
  *    Optional minimum value. Short for 'Greater Than or Equal'.
  * @property {number} [lte]
  *    Optional maximum value. Short for 'Less Than or Equal'.
+ * @property {number} [mod]
+ *    Optional modulo which `value` must divide into without a remainder.
  * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
  */

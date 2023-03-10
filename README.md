@@ -28,34 +28,35 @@ aintaBoolean(null, 'isDone', { begin:'doThings()' });
 
 ### Using the `narrowAintas()` helper:
 
-In the example below, `narrowAintas()` is used to narrow `aintaInteger()`
-into `naInteger()`, and then capture its validation results:
+In the example below, `narrowAintas()` is used to narrow `aintaNumber()`
+into `aintaNatural()`, and then capture its validation results:
 
 - `begin:'bothNatural()'` sets a prefix, added to all explanations
 - `gte:0` checks that the value is not negative
+- `mod:1` checks that the value is an integer
 - `lte:1000` and `lte:50` specify different maximum values for each argument
 - `if (results.length)` checks whether there were any problems
 
 ```js
-import narrowAintas, { aintaInteger } from '@0bdx/ainta';
+import narrowAintas, { aintaNumber } from '@0bdx/ainta';
 
 function bothNatural(a, b) {
-    const [ results, naInteger ] = narrowAintas(
-        { begin:'bothNatural()', gte:0 },
-        aintaInteger
+    const [ results, aintaNatural ] = narrowAintas(
+        { begin:'bothNatural()', gte:0, mod:1 },
+        aintaNumber
     );
-    naInteger(a, 'a', { lte:1000 });
-    naInteger(b, 'b', { lte:50 });
+    aintaNatural(a, 'a', { lte:1000 });
+    aintaNatural(b, 'b', { lte:50 });
     if (results.length) return results;
     return "a and b are both natural numbers, in range!";
 }
 
-bothNatural(-5, 0.25);
-// [ "bothNatural(): `a` is -5 not gte 0",
-//   "bothNatural(): `b` is 0.25 not an integer" ]
+bothNatural(-5, 12.34);
+// [ "bothNatural(): `a` -5 is not gte 0",
+//   "bothNatural(): `b` 23.45 is not divisible by 1" ]
 
 bothNatural(99, 200);
-// [ "bothNatural(): `b` is 200 not lte 50" ]
+// [ "bothNatural(): `b` 200 is not lte 50" ]
 
 bothNatural(12, 3);
 // "a and b are both natural numbers, in range!"

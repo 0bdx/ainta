@@ -180,7 +180,7 @@ const sanitise = text =>
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-const validateOptionNumber = (key, val, has, begin, identifier) => {
+const validateNumericOption = (key, val, has, begin, identifier) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_TYPE_ + QN
@@ -466,11 +466,11 @@ function aintaNumber(
     const { begin } = options;
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
-    result = validateOptionNumber(GTE, optionsGte, hasGte, begin, identifier);
+    result = validateNumericOption(GTE, optionsGte, hasGte, begin, identifier);
     if (result) return result;
     const optionsLte = options.lte;
     const hasLte = optionsLte !== void 0;
-    result = validateOptionNumber(LTE, optionsLte, hasLte, begin, identifier);
+    result = validateNumericOption(LTE, optionsLte, hasLte, begin, identifier);
     if (result) return result;
 
     // If `options.gte` and `options.lte` are both being used, but `gte` is

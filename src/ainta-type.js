@@ -25,10 +25,15 @@ import emptyOptions from './options.js';
  * `option.type`, it returns a short explanation of what went wrong. Otherwise
  * it returns `false`.
  *
- * Due to the way `typeof` works, these are all valid, so return `false`:
+ * Due to the way `typeof` works, these cases are all valid, so return `false`:
  * - `aintaType(null, { type:'object' })`
  * - `aintaType([99], { type:'object' })`
  * - `aintaType(NaN, { type:'number' })`
+ * 
+ * To avoid returning `false` in these cases, use these functions instead:
+ * - `aintaObject(null)`
+ * - `aintaObject([99])`
+ * - `aintaNumber(NaN)`
  *
  * @example
  * import { aintaType } from '@0bdx/ainta';
@@ -274,4 +279,36 @@ export function aintaTypeTest(f) {
     // @ts-expect-error
     equal(f({}, void 0, { begin:true, type:'symbol' }),
         "true: A value is type 'object' not 'symbol'");
+
+    // Invalid `options.gte` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(BigInt('4444'), null, { gte:Symbol('-'), type:'bigint' }),
+        false);
+    // @ts-expect-error
+    equal(f(123, null, { gte:Symbol('-'), type:'bigint' }),
+        "A value is type 'number' not 'bigint'");
+
+    // Invalid `options.lte` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(!1, 'lte test', { lte:'!!!!', type:'boolean' }),
+        false);
+    // @ts-expect-error
+    equal(f(BigInt(99), 'lte test', { lte:'!!!!', type:'boolean' }),
+        "`lte test` is type 'bigint' not 'boolean'");
+
+    // Invalid `options.mod` is a TS error, but does not prevent normal use.
+    // @ts-expect-error
+    equal(f(NaN, void 0, { begin:'mod test', mod:'123', type:'number' }),
+        false);
+    // @ts-expect-error
+    equal(f(null, void 0, { begin:'mod test', mod:'123', type:'number' }),
+        "mod test: A value is null not type 'number'");
+
+    // In fact, `options.gte`, `.lte` and `.mod` are ignored, even if valid.
+    equal(f(BigInt('10'), null, { gte:20, type:'bigint' }),
+        false);
+    equal(f(10, null, { lte:10, type:'number' }),
+        false);
+    equal(f(Math.PI, null, { mod:7, type:'number' }),
+        false);
 }
