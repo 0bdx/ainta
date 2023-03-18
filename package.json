@@ -1,6 +1,6 @@
 {
   "name": "@0bdx/ainta",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Utilities for validating values in 0bdx apps, libraries and websites.",
   "type": "module",
   "files": [
