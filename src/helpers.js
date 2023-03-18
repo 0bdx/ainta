@@ -5,6 +5,7 @@ import {
     BIGINT,
     BOOLEAN,
     CANNOT_OPTIONS,
+    ENUM,
     FUNCTION,
     IS_AN_ARRAY,
     IS_NAN,
@@ -82,6 +83,12 @@ export const quote = text => "'" + text + "'";
 /** @constant {string} QN The literal string "'number'" */
 export const QN = quote(NUMBER);
 
+/** @constant {string} QF The literal string "'function'" */
+export const QF = quote(FUNCTION);
+
+/** @constant {string} QO The literal string "'object'" */
+export const QO = quote(OBJECT);
+
 /** @constant {string} QS The literal string "'string'" */
 export const QS = quote(STRING);
 
@@ -94,7 +101,19 @@ export const QS = quote(STRING);
  */
 export const sanitise = text =>
     encodeURI(text.length <= 32 ? text
-        : `${text.slice(0, 21)}...${text.slice(-8)}`)
+        : `${text.slice(0, 21)}...${text.slice(-8)}`).replace(/%20/g, ' ')
+
+/**
+ * ### Sanitises a string, and then wraps it in single-quotes.
+ * 
+ * Makes .min.js files smaller, and source code more readable.
+ * 
+ * @private
+ *
+ * @param {string} [text]
+ *    Text to sanitise and quote.
+ */
+export const saq = text => quote(sanitise(text));
 
 /**
  * ### Validates an option which should be an array of unique strings.
@@ -113,9 +132,22 @@ export const validateEnumOption = (val, has) => {
             ? IS_NULL + _NOT_AN_ARRAY
             : !isArray(val)
                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : '';
-        if (result) return CANNOT_OPTIONS + 'enum` ' + result;
-    }    
+                : !val.length
+                    ? 'is empty'
+                    : '';
+        if (result) return CANNOT_OPTIONS + ENUM + '` ' + result;
+        for (let i=0, l=val.length; i<l; i++) {
+            const item = val[i];
+            const result = item === null
+            ? IS_NULL + _NOT_TYPE_ + QS
+            : isArray(item)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                : typeof item !== STRING
+                    ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
+                    : '';
+            if (result) return CANNOT_OPTIONS + ENUM + '[' + i + ']` ' + result;
+        }
+    }
 };
 
 /**
@@ -128,12 +160,14 @@ export const validateEnumOption = (val, has) => {
  *    The value of the option, which must be a number to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
- * @param {boolean} [cannotBeZero]
+ * @param {boolean} [notZero]
  *    An optional flag which, if set to `true`, prevents `val` from being zero.
+ * @param {boolean} [notNegative]
+ *    An optional flag which, if set to `true`, prevents `val` from being -ve.
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-export const validateNumericOption = (key, val, has, cannotBeZero) => {
+export const validateNumericOption = (key, val, has, notZero, notNegative) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_TYPE_ + QN
@@ -143,9 +177,11 @@ export const validateNumericOption = (key, val, has, cannotBeZero) => {
                     ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
                     : isNaN(val)
                         ? IS_NAN
-                        : cannotBeZero && !val
+                        : notZero && !val
                             ? 'is zero'
-                            : '';
+                            : notNegative && val < 0
+                                ? 'is negative'
+                                : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
     }    
 };
@@ -161,15 +197,22 @@ export const validateNumericOption = (key, val, has, cannotBeZero) => {
  */
 export const validateRxishOption = (val, has) => {
     if (has) {
-        const result = val === null
-            ? IS_NULL + _NOT_TYPE_ + QN
+        let result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QO
             : isArray(val)
-                ? IS_AN_ARRAY + _NOT_TYPE_ + QN
-                : typeof val !== NUMBER
-                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
-                    : isNaN(val)
-                        ? IS_NAN
-                        : '';
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QO
+                : typeof val !== OBJECT
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QO
+                    : '';
         if (result) return CANNOT_OPTIONS + 'rx` ' + result;
+        const fn = val.test;
+        result = fn === null
+            ? IS_NULL + _NOT_TYPE_ + QF
+            : isArray(fn)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QF
+                : typeof fn !== FUNCTION
+                    ? IS_TYPE_ + quote(typeof fn) + _NOT_ + QF
+                    : '';
+        if (result) return CANNOT_OPTIONS + 'rx.test` ' + result;
     }    
 };

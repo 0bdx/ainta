@@ -94,7 +94,7 @@ export default function aintaNumber(
                 : hasLte && optionsLte < value
                     ? value + _IS_NOT_ + LTE + ' ' + optionsLte
 
-                    // Test if `value` divides by the 'modulo' option, if set.
+                    // Test if `value` divides by the modulo option, if set.
                     : hasMod && (value % optionsMod)
                         ? value + ' is not divisible by ' + optionsMod
                         : ''
@@ -143,7 +143,7 @@ export function aintaNumberTest(f) {
     equal(f(4, 'nope', { lte:NaN, mod:0 }), // the `mod` error is ignored
         "`nope` cannot be validated, `options.lte` is the special `NaN` value");
 
-    // Invalid combination of `options.gte` and `options.lte` produces a helpful result.
+    // Invalid combination of `options.gte` and `.lte` produces a helpful result.
     equal(f(5, 'five', { gte:5.001, lte:5 }),
         "`five` cannot be validated, `options.gte` > `options.lte`");
     equal(f(6, '', { begin:'impossible range', gte:Infinity, lte:-Infinity }),
@@ -182,8 +182,8 @@ export function aintaNumberTest(f) {
         "A value is type 'bigint' not 'number'");
     equal(f([123], 'arr'),
         "`arr` is an array not type 'number'");
-    equal(f(null, null, { begin: 'arr' }),
-        "arr: A value is null not type 'number'");
+    equal(f(null, null, { begin:'X' }),
+        "X: A value is null not type 'number'");
     equal(f('123', void 0, { type:'string' }),
         "A value is type 'string' not 'number'");
 
@@ -257,7 +257,7 @@ export function aintaNumberTest(f) {
     equal(f(10, null, { gte:8, mod:5 }),
         false);
 
-    // Using `options.gte` and `options.mod` together.
+    // Using `options.lte` and `options.mod` together.
     equal(f(5, 'integer', { begin:'>', lte:1, mod:1 }),
         ">: `integer` 5 is not lte 1");
     equal(f(0.5, 'integer', { begin:'>', lte:1, mod:1 }),

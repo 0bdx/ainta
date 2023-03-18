@@ -139,7 +139,7 @@ export function aintaTypeTest(f) {
         "`/` cannot be validated, `options.type` '%3Cpotentially%3E$%7Binsecure%7D' not known");
     // @ts-expect-error
     equal(f({}, 'o', { type:'\\potentially\\$"insecure";and also `\'too long\'`' }),
-        "`o` cannot be validated, `options.type` '%5Cpotentially%5C$%22insecu...o%20long'%60' not known");
+        "`o` cannot be validated, `options.type` '%5Cpotentially%5C$%22insecu...o long'%60' not known");
 
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error
