@@ -100,7 +100,7 @@ export default function aintaString(
                     // Test if `value` passes the RegExp option, if set.
                     : hasRx && !optionsRx.test(value)
                         ? saq(value) + ' fails '
-                            + (optionsRx.constructor.name === 'RegExp'
+                            + (optionsRx instanceof RegExp
                                 ? optionsRx
                                 : 'custom test ' + FUNCTION)
                         : ''

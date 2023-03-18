@@ -42,6 +42,9 @@ const SYMBOL = 'symbol';
 /** @constant {string} UNDEFINED The literal string "undefined" */
 const UNDEFINED = 'undefined';
 
+/** @constant {string} ENUM The literal string "enum" */
+const ENUM = 'enum';
+
 /** @constant {string} GTE The literal string "gte" */
 const GTE = 'gte';
 
@@ -161,6 +164,12 @@ const quote = text => "'" + text + "'";
 /** @constant {string} QN The literal string "'number'" */
 const QN = quote(NUMBER);
 
+/** @constant {string} QF The literal string "'function'" */
+const QF = quote(FUNCTION);
+
+/** @constant {string} QO The literal string "'object'" */
+const QO = quote(OBJECT);
+
 /** @constant {string} QS The literal string "'string'" */
 const QS = quote(STRING);
 
@@ -173,7 +182,19 @@ const QS = quote(STRING);
  */
 const sanitise = text =>
     encodeURI(text.length <= 32 ? text
-        : `${text.slice(0, 21)}...${text.slice(-8)}`);
+        : `${text.slice(0, 21)}...${text.slice(-8)}`).replace(/%20/g, ' ');
+
+/**
+ * ### Sanitises a string, and then wraps it in single-quotes.
+ * 
+ * Makes .min.js files smaller, and source code more readable.
+ * 
+ * @private
+ *
+ * @param {string} [text]
+ *    Text to sanitise and quote.
+ */
+const saq = text => quote(sanitise(text));
 
 /**
  * ### Validates an option which should be an array of unique strings.
@@ -192,9 +213,22 @@ const validateEnumOption = (val, has) => {
             ? IS_NULL + _NOT_AN_ARRAY
             : !isArray(val)
                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : '';
-        if (result) return CANNOT_OPTIONS + 'enum` ' + result;
-    }    
+                : !val.length
+                    ? 'is empty'
+                    : '';
+        if (result) return CANNOT_OPTIONS + ENUM + '` ' + result;
+        for (let i=0, l=val.length; i<l; i++) {
+            const item = val[i];
+            const result = item === null
+            ? IS_NULL + _NOT_TYPE_ + QS
+            : isArray(item)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                : typeof item !== STRING
+                    ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
+                    : '';
+            if (result) return CANNOT_OPTIONS + ENUM + '[' + i + ']` ' + result;
+        }
+    }
 };
 
 /**
@@ -207,12 +241,14 @@ const validateEnumOption = (val, has) => {
  *    The value of the option, which must be a number to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
- * @param {boolean} [cannotBeZero]
+ * @param {boolean} [notZero]
  *    An optional flag which, if set to `true`, prevents `val` from being zero.
+ * @param {boolean} [notNegative]
+ *    An optional flag which, if set to `true`, prevents `val` from being -ve.
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-const validateNumericOption = (key, val, has, cannotBeZero) => {
+const validateNumericOption = (key, val, has, notZero, notNegative) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_TYPE_ + QN
@@ -222,9 +258,11 @@ const validateNumericOption = (key, val, has, cannotBeZero) => {
                     ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
                     : isNaN(val)
                         ? IS_NAN
-                        : cannotBeZero && !val
+                        : notZero && !val
                             ? 'is zero'
-                            : '';
+                            : notNegative && val < 0
+                                ? 'is negative'
+                                : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
     }    
 };
@@ -240,16 +278,23 @@ const validateNumericOption = (key, val, has, cannotBeZero) => {
  */
 const validateRxishOption = (val, has) => {
     if (has) {
-        const result = val === null
-            ? IS_NULL + _NOT_TYPE_ + QN
+        let result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QO
             : isArray(val)
-                ? IS_AN_ARRAY + _NOT_TYPE_ + QN
-                : typeof val !== NUMBER
-                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QN
-                    : isNaN(val)
-                        ? IS_NAN
-                        : '';
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QO
+                : typeof val !== OBJECT
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QO
+                    : '';
         if (result) return CANNOT_OPTIONS + 'rx` ' + result;
+        const fn = val.test;
+        result = fn === null
+            ? IS_NULL + _NOT_TYPE_ + QF
+            : isArray(fn)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QF
+                : typeof fn !== FUNCTION
+                    ? IS_TYPE_ + quote(typeof fn) + _NOT_ + QF
+                    : '';
+        if (result) return CANNOT_OPTIONS + 'rx.test` ' + result;
     }    
 };
 
@@ -583,7 +628,7 @@ function aintaNumber(
                 : hasLte && optionsLte < value
                     ? value + _IS_NOT_ + LTE + ' ' + optionsLte
 
-                    // Test if `value` divides by the 'modulo' option, if set.
+                    // Test if `value` divides by the modulo option, if set.
                     : hasMod && (value % optionsMod)
                         ? value + ' is not divisible by ' + optionsMod
                         : ''
@@ -654,30 +699,33 @@ function aintaString(
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
     result = validateEnumOption(optionsEnum, hasEnum)
-     || validateNumericOption(MAX, optionsMax, hasMax)
-     || validateNumericOption(MIN, optionsMin, hasMin)
+     || validateNumericOption(MAX, optionsMax, hasMax, false, true)
+     || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(optionsRx, hasRx)
 
-    // If `options.max` and `options.min` are both being used, but `max` is
-    // less than `min`, return a helpful result.
+    // If `options.max` and `options.min` are both being used, but `max` is less
+    // than `min`, return a helpful result.
      || (hasMax && hasMin && optionsMax < optionsMin
         ? CANNOT_OPTIONS + 'max` < `options.min`'
 
-        // Xx.
+        // Check that `value` exists in the `options.enum` array, if set.
         : hasEnum && optionsEnum.indexOf(value) == -1
-            ? 'enum issue @TODO'
+            ? saq(value) + ' is not in ' + saq(optionsEnum.join(':'))
 
-            // Check that `value` is not longer than the 'max' option, if set.
+            // Check that `value` is not longer than `options.max`, if set.
             : hasMax && optionsMax < value.length
-                ? value + _IS_NOT_ + MAX + ' ' + optionsMax
+                ? saq(value) + _IS_NOT_ + MAX + ' ' + optionsMax
 
-                // Check that `value` is not shorter than 'min' option, if set.
+                // Check that `value` is not shorter than `options.max`, if set.
                 : hasMin && optionsMin > value.length
-                    ? value + _IS_NOT_ + MIN + ' ' + optionsMin
+                    ? saq(value) + _IS_NOT_ + MIN + ' ' + optionsMin
 
-                    // Test if `value` passes the 'RegExp' option, if set.
+                    // Test if `value` passes the RegExp option, if set.
                     : hasRx && !optionsRx.test(value)
-                        ? value + ' fails ' + optionsRx
+                        ? saq(value) + ' fails '
+                            + (optionsRx instanceof RegExp
+                                ? optionsRx
+                                : 'custom test ' + FUNCTION)
                         : ''
     );
 
