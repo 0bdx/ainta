@@ -33,12 +33,14 @@ import {
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation.
+ * @param {string} [unidentified]
+ *    Optional way to refer to `value`, if `identifier` is not set.
  */
-export const buildResultPrefix = (begin, identifier) => {
+export const buildResultPrefix = (begin, identifier, unidentified) => {
 
     // Wrap `identifier` in backticks, to make the explanation clearer.
     // If `identifier` was not set, fall back to the default, "A value".
-    const ident = identifier ? `\`${identifier}\` ` : 'A value ';
+    const ident = identifier ? `\`${identifier}\` ` : unidentified || 'A value ';
 
     // If `begin` was set, start the prefix with it followed by ": ".
     // Either way, finish the prefix with the normalised identifier.
@@ -80,6 +82,9 @@ export const isRecognisedType = type => [
  */
 export const quote = text => "'" + text + "'";
 
+/** @constant {string} QB The literal string "'boolean'" */
+export const QB = quote(BOOLEAN);
+
 /** @constant {string} QN The literal string "'number'" */
 export const QN = quote(NUMBER);
 
@@ -116,17 +121,21 @@ export const sanitise = text =>
 export const saq = text => quote(sanitise(text));
 
 /**
- * ### Validates an option which should be an array of unique strings.
+ * ### Validates an option which should be an array of strings.
  * @private
- *
+ * 
+ * @param {string} key
+ *    The name of the option to validate, eg "enum".
  * @param {any} val
  *    The value of the option, which must be an array of strings to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
+ * @param {boolean} [allTypes]
+ *    An optional flag which, if `true`, means strings must all be types.
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-export const validateEnumOption = (val, has) => {
+export const validateArrayOfStringsOption = (key, val, has, allTypes) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_AN_ARRAY
@@ -135,7 +144,7 @@ export const validateEnumOption = (val, has) => {
                 : !val.length
                     ? 'is empty'
                     : '';
-        if (result) return CANNOT_OPTIONS + ENUM + '` ' + result;
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
         for (let i=0, l=val.length; i<l; i++) {
             const item = val[i];
             const result = item === null
@@ -144,10 +153,38 @@ export const validateEnumOption = (val, has) => {
                 ? IS_AN_ARRAY + _NOT_TYPE_ + QS
                 : typeof item !== STRING
                     ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
-                    : '';
-            if (result) return CANNOT_OPTIONS + ENUM + '[' + i + ']` ' + result;
+                    : allTypes && !isRecognisedType(item)
+                        ? saq(item) + _NOT_ + 'known'
+                        : '';
+            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
         }
     }
+};
+
+/**
+ * ### Validates an option which should be a boolean, eg `options.pass`.
+ * @private
+ *
+ * @param {string} key
+ *    The name of the option to validate, eg "pass".
+ * @param {any} val
+ *    The value of the option, which must be a number to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns undefined if `val` is valid, or an explanation if not.
+ */
+export const validateBooleanOption = (key, val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QB
+            : isArray(val)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QB
+                : typeof val !== BOOLEAN
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QB
+                    : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+    }    
 };
 
 /**

@@ -42,6 +42,9 @@ export const ENUM = 'enum';
 /** @constant {string} GTE The literal string "gte" */
 export const GTE = 'gte';
 
+/** @constant {string} LEAST The literal string "least" */
+export const LEAST = 'least';
+
 /** @constant {string} LTE The literal string "lte" */
 export const LTE = 'lte';
 
@@ -54,11 +57,20 @@ export const MIN = 'min';
 /** @constant {string} MOD The literal string "mod" */
 export const MOD = 'mod';
 
+/** @constant {string} MOST The literal string "most" */
+export const MOST = 'most';
+
+/** @constant {string} PASS The literal string "pass" */
+export const PASS = 'pass';
+
 /** @constant {string} RX The literal string "rx" */
 export const RX = 'rx';
 
 /** @constant {string} TYPE The literal string "type" */
 export const TYPE = 'type';
+
+/** @constant {string} TYPES The literal string "types" */
+export const TYPES = 'types';
 
 /** @constant {string} AN_ The literal string "an " */
 export const AN_ = 'an ';

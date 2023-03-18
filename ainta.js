@@ -207,7 +207,7 @@ const saq = text => quote(sanitise(text));
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-const validateEnumOption = (val, has) => {
+const validateArrayOfStringsOption = (val, has) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_AN_ARRAY
@@ -698,7 +698,7 @@ function aintaString(
     const hasMin = optionsMin !== void 0;
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
-    result = validateEnumOption(optionsEnum, hasEnum)
+    result = validateArrayOfStringsOption(optionsEnum, hasEnum)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(optionsRx, hasRx)

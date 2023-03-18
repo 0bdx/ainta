@@ -1,18 +1,43 @@
 import {
+    _IS_NOT_,
     _NOT_,
     _NOT_AN_ARRAY,
+    CANNOT_OPTIONS,
+    FUNCTION,
     IS_NULL,
     IS_TYPE_,
+    LEAST,
+    MAX,
+    MIN,
+    MOST,
+    PASS,
+    TYPES,
 } from './constants.js';
-import { buildResultPrefix, isArray, quote } from './helpers.js';
+import {
+    buildResultPrefix,
+    isArray,
+    quote,
+    validateArrayOfStringsOption,
+    validateBooleanOption,
+    validateNumericOption,
+} from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
  * ### Validates a value using JavaScript's native `Array.isArray()`.
  *
  * If the first argument passed to `aintaArray()` ain't an array, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
  *
+ * Else, if the array fails any of the following conditions, it also returns an
+ * explanation of what went wrong:
+ * - `options.least` - if set, there must be at least this number of items
+ * - `options.most` - if set, there must not be more than this number of items
+ * - `options.pass` - if set, each item is validated more deeply using `options`
+ * - `options.types` - if set, all items must be one of these types
+ * 
+ * Otherwise, `aintaArray()` returns `false`.
+ * 
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  * 
@@ -24,6 +49,9 @@ import emptyOptions from './options.js';
  *
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
+ *
+ * aintaArray([1, true, 'ok'], 'num_or_str', { types:['number','string'] });
+ * // "`num_or_str[1]` is type 'boolean' not 'number:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -39,16 +67,50 @@ export default function aintaArray(
     identifier,
     options = emptyOptions,
 ) {
-    // Process the happy path as quickly as possible.
-    if (isArray(value)) return false;
+    // Check that `value` is an array. If not, bail out right away.
+    if (!isArray(value))
+        return buildResultPrefix(options.begin, identifier) + (
+            value === null
+                ? IS_NULL
+                : IS_TYPE_ + quote(typeof value)
+        ) + _NOT_AN_ARRAY;
 
-    // Generate an explanation of what went wrong.
-    return buildResultPrefix(options.begin, identifier) + (
-        value === null
-            ? IS_NULL
-            : IS_TYPE_ + quote(typeof value)
-        ) + _NOT_AN_ARRAY
-    ;
+    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
+    // helpful result. Note that setting these to `undefined` may be useful in
+    // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
+    // is why we use `options.most !== undefined` instead of `"most" in options`.
+    const optionsLeast = options.least;
+    const hasLeast = optionsLeast !== void 0;
+    const optionsMost = options.most;
+    const hasMost = optionsMost !== void 0;
+    const optionsPass = options.pass;
+    const hasPass = optionsPass !== void 0;
+    const optionsTypes = options.types;
+    const hasTypes = optionsTypes !== void 0;
+    const result =
+        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+     || validateNumericOption(MOST, optionsMost, hasMost, false, true)
+     || validateBooleanOption(PASS, optionsPass, hasPass)
+     || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
+
+    // If `options.least` and `options.most` are both being used, but `least` is
+    // more than `most`, return a helpful result.
+    || (hasLeast && hasMost && optionsLeast > optionsMost
+        ? CANNOT_OPTIONS + 'least` > `options.most`'
+
+        // Check that the length is not less than `options.least`, if set.
+        : hasLeast && optionsLeast > value.length
+            ? ' has length ' + value.length + ' > `options.' + LEAST + '` ' + optionsLeast
+
+            // Check that the length is not more than `options.most`, if set.
+            : hasMost && optionsMost < value.length
+                ? ' has length ' + value.length + ' > `options.' + MOST + '` ' + optionsMost
+                : ''
+    );
+
+    return result
+        ? buildResultPrefix(options.begin, identifier, 'an array') + result
+        : false;
 }
 
 /**
@@ -65,7 +127,7 @@ export function aintaArrayTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
 
-    // Typical usage.
+    // Typical usage without `options.least`, `.most`, `.pass` or `.types`.
     equal(f([]),
         false);
     equal(f([1, 2, 3], void 0, { begin:'Array Test' }),
@@ -84,6 +146,14 @@ export function aintaArrayTest(f) {
         "`pseudo-array` is type 'object' not an array");
     equal(f(123, void 0, { type:'number' }),
         "A value is type 'number' not an array");
+
+    // Typical `options.least` usage.
+    equal(f([1,2], null, { least:3 }),
+        "an array has length 2 > `options.least` 3");
+    equal(f([1,2,3], null, { least:3 }),
+        false);
+    equal(f([], 'empty_array,', { least:0 }),
+        false);
 
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error

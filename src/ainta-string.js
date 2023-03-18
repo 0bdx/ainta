@@ -2,6 +2,7 @@ import aintaType from './ainta-type.js';
 import {
     _IS_NOT_,
     CANNOT_OPTIONS,
+    ENUM,
     FUNCTION,
     MAX,
     MIN,
@@ -10,7 +11,7 @@ import {
 import {
     buildResultPrefix,
     saq,
-    validateEnumOption,
+    validateArrayOfStringsOption,
     validateNumericOption,
     validateRxishOption,
 } from './helpers.js';
@@ -42,6 +43,12 @@ import emptyOptions from './options.js';
  *
  * aintaString(99, 'redBalloons', { begin:'fly()' });
  * // "fly(): `redBalloons` is type 'number' not 'string'"
+ *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ * 
+ * equal(f('Fum!', null, { enum:['Fee','Fi','Fo'] }),
+ * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
  *
  * @param {any} value
  *    The value to validate.
@@ -75,7 +82,8 @@ export default function aintaString(
     const hasMin = optionsMin !== void 0;
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
-    result = validateEnumOption(optionsEnum, hasEnum)
+    result =
+        validateArrayOfStringsOption(ENUM, optionsEnum, hasEnum)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(optionsRx, hasRx)
