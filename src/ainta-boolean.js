@@ -63,8 +63,8 @@ export function aintaBooleanTest(f) {
         false);
     equal(f(123),
         "A value is type 'number' not 'boolean'");
-    equal(f(null, 'nullish', { begin:'Boolean Test' }),
-        "Boolean Test: `nullish` is null not type 'boolean'");
+    equal(f(null, 'should_be_bool', { begin:'Boolean Test' }),
+        "Boolean Test: `should_be_bool` is null not type 'boolean'");
     equal(f(void 0, null, { begin:'Boolean Test' }),
         "Boolean Test: A value is type 'undefined' not 'boolean'");
     equal(f([], 'arr'),

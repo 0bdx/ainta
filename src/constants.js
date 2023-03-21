@@ -75,20 +75,29 @@ export const TYPES = 'types';
 /** @constant {string} AN_ The literal string "an " */
 export const AN_ = 'an ';
 
+/** @constant {string} AN_ARRAY The literal string "an array" */
+export const AN_ARRAY = AN_ + ARRAY;
+
 /** @constant {string} IS_ The literal string "is " */
 export const IS_ = 'is ';
 
 /** @constant {string} _NOT_ The literal string " not " */
 export const _NOT_ = ' not ';
 
+/** @constant {string} _OF_ The literal string " of " */
+export const _OF_ = ' of ';
+
+/** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
+export const _BT_OPTIONS_DOT = ' `options.';
+
 /** @constant {string} CANNOT_OPTIONS The literal string "cannot be validated, `options." */
-export const CANNOT_OPTIONS = 'cannot be validated, `options.';
+export const CANNOT_OPTIONS = 'cannot be validated,' + _BT_OPTIONS_DOT;
 
 /** @constant {string} TYPE_ The literal string "type " */
 export const TYPE_ = TYPE + ' ';
 
 /** @constant {string} IS_AN_ARRAY The literal string "is an array" */
-export const IS_AN_ARRAY = IS_ + AN_ + ARRAY;
+export const IS_AN_ARRAY = IS_ + AN_ARRAY;
 
 /** @constant {string} IS_NULL The literal string "is null" */
 export const IS_NULL = IS_ + NULL;
