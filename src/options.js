@@ -14,7 +14,7 @@
  * - `options.enum` is only used by `aintaString()` and `aintaArray()`
  * - `options.gte` is only used by `aintaNumber()`
  *
- * @typedef {Object} Options
+ * @typedef {object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @property {string[]} [enum]
@@ -46,7 +46,7 @@
 /**
  * ### An object with a `test()` function. Typically a JavaScript `RegExp`.
  * 
- * @typedef {Object} Rxish
+ * @typedef {object} Rxish
  * @property {function(string):boolean} test
  *    The test function, which takes a string and returns `true` if it passes
  *    and `false` if it fails.

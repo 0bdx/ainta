@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import * as bh from '@0bdx/build-helpers';
+import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
 
 // Use @0bdx/build-helpers to generate 'basic library' Rollup configuration.
@@ -45,6 +46,27 @@ const config = {
             plugins: [terser(terserOptions)]
         }
     ],
+
+    // When generated, `ainta.js` contains multiple instances of:
+    //    import('./options').Options
+    // These cause TS errors, so must be replaced by:
+    //    Options
+    //
+    // This works because we have rolled-up the source into a single file -
+    // the `@typedef {object} Options ...` is at the top of that file.
+    //
+    // Note that this solution also fixes an issue in `ainta.d.ts`.
+    // Was:
+    //    options?: any
+    // Now:
+    //    options?: Options
+    plugins: [replace({
+        "import('./options').": '',
+
+        // Prevent the "(!) Plugin replace: @rollup/plugin-replace: ... will
+        // default this option to `true`." message.
+        preventAssignment: true,
+    })]
 }
 
 export default config;

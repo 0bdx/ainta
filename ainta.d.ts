@@ -1,7 +1,7 @@
 /**
  * Any one of `ainta`'s validation functions.
  */
-export type Ainta = (arg0: any, arg1: string | null, arg2: any | null) => string | false;
+export type Ainta = (arg0: any, arg1: string | null, arg2: Options | null) => string | false;
 /**
  * ### JavaScript type to expect, eg "boolean" or "undefined".
  */
@@ -119,7 +119,7 @@ export type Rxish = {
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
-export function aintaArray(value: any, identifier?: string, options?: any): false | string;
+export function aintaArray(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates a boolean.
  *
@@ -147,7 +147,7 @@ export function aintaArray(value: any, identifier?: string, options?: any): fals
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
-export function aintaBoolean(value: any, identifier?: string, options?: any): false | string;
+export function aintaBoolean(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates that a value is exactly `null`.
  *
@@ -175,7 +175,7 @@ export function aintaBoolean(value: any, identifier?: string, options?: any): fa
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
-export function aintaNull(value: any, identifier?: string, options?: any): false | string;
+export function aintaNull(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates a number.
  *
@@ -215,7 +215,7 @@ export function aintaNull(value: any, identifier?: string, options?: any): false
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if any of the `options` it uses are invalid.
  */
-export function aintaNumber(value: any, identifier?: string, options?: any): false | string;
+export function aintaNumber(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates a string.
  *
@@ -259,7 +259,7 @@ export function aintaNumber(value: any, identifier?: string, options?: any): fal
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if any of the `options` it uses are invalid.
  */
-export function aintaString(value: any, identifier?: string, options?: any): false | string;
+export function aintaString(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates a value using JavaScript's native `typeof`.
  *
@@ -296,7 +296,7 @@ export function aintaString(value: any, identifier?: string, options?: any): fal
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if `options.type` is invalid.
  */
-export function aintaType(value: any, identifier?: string, options?: any): false | string;
+export function aintaType(value: any, identifier?: string, options?: Options): false | string;
 /** Any one of `ainta`'s validation functions.
  * @typedef {function(any, string?, Options?):string|false} Ainta */
 /**
@@ -345,5 +345,5 @@ export function aintaType(value: any, identifier?: string, options?: any): false
  *    The first item of the returned array will contain aggregated results. The
  *    remaining items are the passed-in functions, with `options` applied.
  */
-declare function narrowAintas(options?: any, ...aintas: Ainta[]): [string[], ...Ainta[]];
+declare function narrowAintas(options?: Options, ...aintas: Ainta[]): [string[], ...Ainta[]];
 export { narrowAintas as default };
