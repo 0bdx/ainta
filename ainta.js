@@ -1,6 +1,6 @@
 /**
  * https://www.npmjs.com/package/@0bdx/ainta
- * @version 0.0.2
+ * @version 0.0.3
  * @license Copyright (c) 2023 0bdx <0@0bdx.com> (0bdx.com)
  * SPDX-License-Identifier: MIT
  */
@@ -48,6 +48,9 @@ const ENUM = 'enum';
 /** @constant {string} GTE The literal string "gte" */
 const GTE = 'gte';
 
+/** @constant {string} LEAST The literal string "least" */
+const LEAST = 'least';
+
 /** @constant {string} LTE The literal string "lte" */
 const LTE = 'lte';
 
@@ -60,11 +63,23 @@ const MIN = 'min';
 /** @constant {string} MOD The literal string "mod" */
 const MOD = 'mod';
 
+/** @constant {string} MOST The literal string "most" */
+const MOST = 'most';
+
+/** @constant {string} PASS The literal string "pass" */
+const PASS = 'pass';
+
 /** @constant {string} TYPE The literal string "type" */
 const TYPE = 'type';
 
+/** @constant {string} TYPES The literal string "types" */
+const TYPES = 'types';
+
 /** @constant {string} AN_ The literal string "an " */
 const AN_ = 'an ';
+
+/** @constant {string} AN_ARRAY The literal string "an array" */
+const AN_ARRAY = AN_ + ARRAY;
 
 /** @constant {string} IS_ The literal string "is " */
 const IS_ = 'is ';
@@ -72,14 +87,20 @@ const IS_ = 'is ';
 /** @constant {string} _NOT_ The literal string " not " */
 const _NOT_ = ' not ';
 
+/** @constant {string} _OF_ The literal string " of " */
+const _OF_ = ' of ';
+
+/** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
+const _BT_OPTIONS_DOT = ' `options.';
+
 /** @constant {string} CANNOT_OPTIONS The literal string "cannot be validated, `options." */
-const CANNOT_OPTIONS = 'cannot be validated, `options.';
+const CANNOT_OPTIONS = 'cannot be validated,' + _BT_OPTIONS_DOT;
 
 /** @constant {string} TYPE_ The literal string "type " */
 const TYPE_ = TYPE + ' ';
 
 /** @constant {string} IS_AN_ARRAY The literal string "is an array" */
-const IS_AN_ARRAY = IS_ + AN_ + ARRAY;
+const IS_AN_ARRAY = IS_ + AN_ARRAY;
 
 /** @constant {string} IS_NULL The literal string "is null" */
 const IS_NULL = IS_ + NULL;
@@ -114,12 +135,14 @@ const _NOT_TYPE_ = _NOT_ + TYPE_;
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation.
+ * @param {string} [unidentified]
+ *    Optional way to refer to `value`, if `identifier` is not set.
  */
-const buildResultPrefix = (begin, identifier) => {
+const buildResultPrefix = (begin, identifier, unidentified) => {
 
     // Wrap `identifier` in backticks, to make the explanation clearer.
     // If `identifier` was not set, fall back to the default, "A value".
-    const ident = identifier ? `\`${identifier}\` ` : 'A value ';
+    const ident = identifier ? `\`${identifier}\` ` : unidentified || 'A value ';
 
     // If `begin` was set, start the prefix with it followed by ": ".
     // Either way, finish the prefix with the normalised identifier.
@@ -161,6 +184,9 @@ const isRecognisedType = type => [
  */
 const quote = text => "'" + text + "'";
 
+/** @constant {string} QB The literal string "'boolean'" */
+const QB = quote(BOOLEAN);
+
 /** @constant {string} QN The literal string "'number'" */
 const QN = quote(NUMBER);
 
@@ -197,17 +223,21 @@ const sanitise = text =>
 const saq = text => quote(sanitise(text));
 
 /**
- * ### Validates an option which should be an array of unique strings.
+ * ### Validates an option which should be an array of strings.
  * @private
- *
+ * 
+ * @param {string} key
+ *    The name of the option to validate, eg "enum".
  * @param {any} val
  *    The value of the option, which must be an array of strings to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
+ * @param {boolean} [allTypes]
+ *    An optional flag which, if `true`, means strings must all be types.
  * @returns {undefined|string}
  *    Returns undefined if `val` is valid, or an explanation if not.
  */
-const validateArrayOfStringsOption = (val, has) => {
+const validateArrayOfStringsOption = (key, val, has, allTypes) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_AN_ARRAY
@@ -216,7 +246,7 @@ const validateArrayOfStringsOption = (val, has) => {
                 : !val.length
                     ? 'is empty'
                     : '';
-        if (result) return CANNOT_OPTIONS + ENUM + '` ' + result;
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
         for (let i=0, l=val.length; i<l; i++) {
             const item = val[i];
             const result = item === null
@@ -225,10 +255,38 @@ const validateArrayOfStringsOption = (val, has) => {
                 ? IS_AN_ARRAY + _NOT_TYPE_ + QS
                 : typeof item !== STRING
                     ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
-                    : '';
-            if (result) return CANNOT_OPTIONS + ENUM + '[' + i + ']` ' + result;
+                    : allTypes && !isRecognisedType(item)
+                        ? saq(item) + _NOT_ + 'known'
+                        : '';
+            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
         }
     }
+};
+
+/**
+ * ### Validates an option which should be a boolean, eg `options.pass`.
+ * @private
+ *
+ * @param {string} key
+ *    The name of the option to validate, eg "pass".
+ * @param {any} val
+ *    The value of the option, which must be a number to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns undefined if `val` is valid, or an explanation if not.
+ */
+const validateBooleanOption = (key, val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_TYPE_ + QB
+            : isArray(val)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QB
+                : typeof val !== BOOLEAN
+                    ? IS_TYPE_ + quote(typeof val) + _NOT_ + QB
+                    : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+    }    
 };
 
 /**
@@ -299,6 +357,12 @@ const validateRxishOption = (val, has) => {
 };
 
 /**
+ * ### JavaScript type to expect, eg "boolean" or "undefined".
+ *
+ * @typedef {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} TypeOf
+ */
+
+/**
  * ### A configuration object, used by all `ainta` functions.
  * 
  * Each option is actually optional, so an empty object `{}` is perfectly valid.
@@ -312,21 +376,29 @@ const validateRxishOption = (val, has) => {
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @property {string[]} [enum]
- *    Optional array of strings. TODO discuss
+ *    Optional array of strings.
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {number} [least]
+ *    Optional minimum length of an array.
  * @property {number} [lte]
  *    Optional maximum value. Short for 'Less Than or Equal'.
  * @property {number} [max]
- *    Optional maximum length of a string. TODO or array?
+ *    Optional maximum length of a string.
  * @property {number} [min]
- *    Optional minimum length of a string. TODO or array?
+ *    Optional minimum length of a string.
  * @property {number} [mod]
  *    Optional modulo which `value` must divide into without a remainder.
+ * @property {number} [most]
+ *    Optional maximum length of an array.
+ * @property {boolean} [pass]
+ *    Optional flag. If true, array items are validated using `options`.
  * @property {Rxish} [rx]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
- * @property {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} [type]
+ * @property {TypeOf} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
+ * @property {TypeOf[]} [types]
+ *    Optional array of JS types to expect, eg ["bigint","number"].
  */
 
 /**
@@ -347,50 +419,6 @@ const validateRxishOption = (val, has) => {
  * @type Options
  */
 const emptyOptions = {};
-
-/**
- * ### Validates a value using JavaScript's native `Array.isArray()`.
- *
- * If the first argument passed to `aintaArray()` ain't an array, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
- *
- * @example
- * import { aintaArray } from '@0bdx/ainta';
- * 
- * aintaArray([1, 2, 3]);
- * // false
- *
- * aintaArray({});
- * // "A value is type 'object' not an array"
- *
- * aintaArray(null, 'list', { begin:'processList()' });
- * // "processList(): `list` is null not an array"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- */
-function aintaArray(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Process the happy path as quickly as possible.
-    if (isArray(value)) return false;
-
-    // Generate an explanation of what went wrong.
-    return buildResultPrefix(options.begin, identifier) + (
-        value === null
-            ? IS_NULL
-            : IS_TYPE_ + quote(typeof value)
-        ) + _NOT_AN_ARRAY
-    ;
-}
 
 /**
  * ### Validates a value using JavaScript's native `typeof`.
@@ -462,86 +490,6 @@ function aintaType(
                 ? IS_AN_ARRAY + _NOT_TYPE_
                 : IS_TYPE_ + quote(type) + _NOT_
         ) + quote(optionsType)
-    ;
-}
-
-/**
- * ### Validates a boolean.
- *
- * If the first argument passed to `aintaBoolean()` ain't a boolean, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
- *
- * @example
- * import { aintaBoolean } from '@0bdx/ainta';
- * 
- * aintaBoolean(true);
- * // false
- *
- * aintaBoolean(1234);
- * // "A value is type 'number' not 'boolean'"
- *
- * aintaBoolean(null, 'isDone', { begin:'doThings()' });
- * // "doThings(): `isDone` is null not type 'boolean'"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- */
-function aintaBoolean(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Use aintaType() to check whether `value` is a boolean.
-    return aintaType(value, identifier, { ...options, type:BOOLEAN });
-}
-
-/**
- * ### Validates that a value is exactly `null`.
- *
- * If the first argument passed to `aintaNull()` ain't a `null`, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
- *
- * @example
- * import { aintaNull } from '@0bdx/ainta';
- * 
- * aintaNull(null);
- * // false
- *
- * aintaNull();
- * // "A value is type 'undefined' not null"
- *
- * aintaNull(false, 'x', { begin:'expectNull()' });
- * // "expectNull(): `x` is type 'boolean' not null"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- */
-function aintaNull(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Process the happy path as quickly as possible.
-    if (value === null) return false;
-
-    // Generate an explanation of what went wrong.
-    return buildResultPrefix(options.begin, identifier) + (
-        isArray(value)
-            ? IS_AN_ARRAY
-            : IS_TYPE_ + quote(typeof value)
-        ) + _NOT_ + NULL
     ;
 }
 
@@ -666,6 +614,12 @@ function aintaNumber(
  * aintaString(99, 'redBalloons', { begin:'fly()' });
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ * 
+ * equal(f('Fum!', null, { enum:['Fee','Fi','Fo'] }),
+ * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
+ *
  * @param {any} value
  *    The value to validate.
  * @param {string} [identifier]
@@ -698,7 +652,8 @@ function aintaString(
     const hasMin = optionsMin !== void 0;
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
-    result = validateArrayOfStringsOption(optionsEnum, hasEnum)
+    result =
+        validateArrayOfStringsOption(ENUM, optionsEnum, hasEnum)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(optionsRx, hasRx)
@@ -732,6 +687,234 @@ function aintaString(
     return result
         ? buildResultPrefix(options.begin, identifier) + result
         : false;
+}
+
+/**
+ * ### Validates a value using JavaScript's native `Array.isArray()`.
+ *
+ * If the first argument passed to `aintaArray()` ain't an array, it returns
+ * a short explanation of what went wrong.
+ *
+ * Else, if the array fails any of the following conditions, it also returns an
+ * explanation of what went wrong:
+ * - `options.least` - if set, there must be at least this number of items
+ * - `options.most` - if set, there must not be more than this number of items
+ * - `options.pass` - if set, each item is validated more deeply using `options`
+ * - `options.types` - if set, all items must be one of these types
+ * 
+ * Otherwise, `aintaArray()` returns `false`.
+ * 
+ * @example
+ * import { aintaArray } from '@0bdx/ainta';
+ * 
+ * aintaArray([1, 2, 3]);
+ * // false
+ *
+ * aintaArray({});
+ * // "A value is type 'object' not an array"
+ *
+ * aintaArray(null, 'list', { begin:'processList()' });
+ * // "processList(): `list` is null not an array"
+ *
+ * aintaArray([1, true, 'ok'], 'num_or_str', { types:['number','string'] });
+ * // "`num_or_str[1]` is type 'boolean' not 'number:string'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaArray(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Check that `value` is an array. If not, bail out right away.
+    if (!isArray(value))
+        return buildResultPrefix(options.begin, identifier) + (
+            value === null
+                ? IS_NULL
+                : IS_TYPE_ + quote(typeof value)
+        ) + _NOT_AN_ARRAY;
+
+    // Will probably be needed several times, below.
+    const length = value.length;
+
+    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
+    // helpful result. Note that setting these to `undefined` may be useful in
+    // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
+    // is why we use `options.most !== undefined` instead of `"most" in options`.
+    const optionsLeast = options.least;
+    const hasLeast = optionsLeast !== void 0;
+    const optionsMost = options.most;
+    const hasMost = optionsMost !== void 0;
+    const optionsPass = options.pass;
+    const hasPass = optionsPass !== void 0;
+    const optionsTypes = options.types;
+    const hasTypes = optionsTypes !== void 0;
+    const result =
+        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+     || validateNumericOption(MOST, optionsMost, hasMost, false, true)
+     || validateBooleanOption(PASS, optionsPass, hasPass)
+     || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
+
+    // If `options.least` and `options.most` are both being used, but `least` is
+    // more than `most`, return a helpful result.
+    || (hasLeast && hasMost && optionsLeast > optionsMost
+        ? CANNOT_OPTIONS + 'least` > `options.most`'
+
+        // Check that the length is not less than `options.least`, if set.
+        : hasLeast && optionsLeast > length
+            ? 'has length ' + length + ' < `options.' + LEAST + '` ' + optionsLeast
+
+            // Check that the length is not more than `options.most`, if set.
+            : hasMost && optionsMost < length
+                ? 'has length ' + length + ' > `options.' + MOST + '` ' + optionsMost
+                : ''
+    );
+
+    // If any of the validation above has failed, return an explanation.
+    return result
+        ? buildResultPrefix(options.begin, identifier, 'An array ') + result
+
+        // Otherwise, check that every item conforms to `options.types`, if set.
+        : validateEveryItem(value, length, options, hasTypes, identifier);
+}
+
+function validateEveryItem(value, length, options, hasTypes, identifier) {
+    const { begin, pass, types } = options;
+
+    // Step through each item in the `value` array.
+    for (let i=0; i<length; i++) {
+        const item = value[i];
+        const type = typeof item;
+        const SQI = '[' + i + ']';
+
+        // If the item's type is not included in `options.types`, return an
+        // explanation of the problem.
+        if (hasTypes && !types.includes(type)) {
+            const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+            return buildResultPrefix(
+                begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + IS_ + (
+                item === null
+                    ? NULL
+                    : isArray(item)
+                        ? AN_ARRAY
+                        : TYPE_ + quote(type)
+            ) + ',' + _NOT_ + (
+                types.length === 1
+                    ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
+                    : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+            );
+        }
+
+        // The item's type is included in `options.types`, but if `options.pass`
+        // is set to `true` the item may still be invalid.
+        if (options.pass) {
+            const itemIdentifier = identifier
+                ? identifier + '[' + i + ']'
+                : SQI + _OF_ + AN_ARRAY;
+            let result;
+            switch (type) {
+                case NUMBER:
+                    result = aintaNumber(item, itemIdentifier, options);
+                    if (result) return result;
+                    break;
+                case STRING:
+                    result = aintaString(item, itemIdentifier, options);
+                    if (result) return result;
+                    break;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * ### Validates a boolean.
+ *
+ * If the first argument passed to `aintaBoolean()` ain't a boolean, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaBoolean } from '@0bdx/ainta';
+ * 
+ * aintaBoolean(true);
+ * // false
+ *
+ * aintaBoolean(1234);
+ * // "A value is type 'number' not 'boolean'"
+ *
+ * aintaBoolean(null, 'isDone', { begin:'doThings()' });
+ * // "doThings(): `isDone` is null not type 'boolean'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaBoolean(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Use aintaType() to check whether `value` is a boolean.
+    return aintaType(value, identifier, { ...options, type:BOOLEAN });
+}
+
+/**
+ * ### Validates that a value is exactly `null`.
+ *
+ * If the first argument passed to `aintaNull()` ain't a `null`, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaNull } from '@0bdx/ainta';
+ * 
+ * aintaNull(null);
+ * // false
+ *
+ * aintaNull();
+ * // "A value is type 'undefined' not null"
+ *
+ * aintaNull(false, 'x', { begin:'expectNull()' });
+ * // "expectNull(): `x` is type 'boolean' not null"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaNull(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Process the happy path as quickly as possible.
+    if (value === null) return false;
+
+    // Generate an explanation of what went wrong.
+    return buildResultPrefix(options.begin, identifier) + (
+        isArray(value)
+            ? IS_AN_ARRAY
+            : IS_TYPE_ + quote(typeof value)
+        ) + _NOT_ + NULL
+    ;
 }
 
 /** Any one of `ainta`'s validation functions.

@@ -1,4 +1,5 @@
-import { aintaNumber, aintaString } from './index.js';
+import aintaNumber from './ainta-number.js';
+import aintaString from './ainta-string.js';
 import {
     _BT_OPTIONS_DOT,
     _IS_NOT_,

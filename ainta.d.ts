@@ -3,6 +3,10 @@
  */
 export type Ainta = (arg0: any, arg1: string | null, arg2: any | null) => string | false;
 /**
+ * ### JavaScript type to expect, eg "boolean" or "undefined".
+ */
+export type TypeOf = 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
+/**
  * ### A configuration object, used by all `ainta` functions.
  *
  * Each option is actually optional, so an empty object `{}` is perfectly valid.
@@ -18,7 +22,7 @@ export type Options = {
      */
     begin?: string;
     /**
-     * Optional array of strings. TODO discuss
+     * Optional array of strings.
      */
     enum?: string[];
     /**
@@ -26,15 +30,19 @@ export type Options = {
      */
     gte?: number;
     /**
+     * Optional minimum length of an array.
+     */
+    least?: number;
+    /**
      * Optional maximum value. Short for 'Less Than or Equal'.
      */
     lte?: number;
     /**
-     * Optional maximum length of a string. TODO or array?
+     * Optional maximum length of a string.
      */
     max?: number;
     /**
-     * Optional minimum length of a string. TODO or array?
+     * Optional minimum length of a string.
      */
     min?: number;
     /**
@@ -42,13 +50,25 @@ export type Options = {
      */
     mod?: number;
     /**
+     * Optional maximum length of an array.
+     */
+    most?: number;
+    /**
+     * Optional flag. If true, array items are validated using `options`.
+     */
+    pass?: boolean;
+    /**
      * Optional object with a `test()` function. Typically a JavaScript `RegExp`.
      */
     rx?: Rxish;
     /**
      * Optional JavaScript type to expect, eg "boolean" or "undefined".
      */
-    type?: 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
+    type?: TypeOf;
+    /**
+     * Optional array of JS types to expect, eg ["bigint","number"].
+     */
+    types?: TypeOf[];
 };
 /**
  * ### An object with a `test()` function. Typically a JavaScript `RegExp`.
@@ -64,7 +84,16 @@ export type Rxish = {
  * ### Validates a value using JavaScript's native `Array.isArray()`.
  *
  * If the first argument passed to `aintaArray()` ain't an array, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
+ *
+ * Else, if the array fails any of the following conditions, it also returns an
+ * explanation of what went wrong:
+ * - `options.least` - if set, there must be at least this number of items
+ * - `options.most` - if set, there must not be more than this number of items
+ * - `options.pass` - if set, each item is validated more deeply using `options`
+ * - `options.types` - if set, all items must be one of these types
+ *
+ * Otherwise, `aintaArray()` returns `false`.
  *
  * @example
  * import { aintaArray } from '@0bdx/ainta';
@@ -77,6 +106,9 @@ export type Rxish = {
  *
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
+ *
+ * aintaArray([1, true, 'ok'], 'num_or_str', { types:['number','string'] });
+ * // "`num_or_str[1]` is type 'boolean' not 'number:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -210,6 +242,12 @@ export function aintaNumber(value: any, identifier?: string, options?: any): fal
  *
  * aintaString(99, 'redBalloons', { begin:'fly()' });
  * // "fly(): `redBalloons` is type 'number' not 'string'"
+ *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ *
+ * equal(f('Fum!', null, { enum:['Fee','Fi','Fo'] }),
+ * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
  *
  * @param {any} value
  *    The value to validate.
