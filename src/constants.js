@@ -18,6 +18,9 @@ export const BOOLEAN = 'boolean';
 /** @constant {string} FUNCTION The literal string "function" */
 export const FUNCTION = 'function';
 
+/** @constant {string} NAN The literal string "nan" */
+export const NAN = 'nan';
+
 /** @constant {string} NULL The literal string "null" */
 export const NULL = 'null';
 
@@ -42,6 +45,12 @@ export const ENUM = 'enum';
 /** @constant {string} GTE The literal string "gte" */
 export const GTE = 'gte';
 
+// /** @constant {string} KIND The literal string "kind" */
+// export const KIND = 'kind';
+// 
+// /** @constant {string} KINDS The literal string "kinds" */
+// export const KINDS = 'kinds';
+
 /** @constant {string} LEAST The literal string "least" */
 export const LEAST = 'least';
 
@@ -60,11 +69,17 @@ export const MOD = 'mod';
 /** @constant {string} MOST The literal string "most" */
 export const MOST = 'most';
 
+/** @constant {string} OPEN The literal string "open" */
+export const OPEN = 'open';
+
 /** @constant {string} PASS The literal string "pass" */
 export const PASS = 'pass';
 
 /** @constant {string} RX The literal string "rx" */
 export const RX = 'rx';
+
+/** @constant {string} SCHEMA The literal string "schema" */
+export const SCHEMA = 'schema';
 
 /** @constant {string} TYPE The literal string "type" */
 export const TYPE = 'type';
@@ -77,6 +92,9 @@ export const AN_ = 'an ';
 
 /** @constant {string} AN_ARRAY The literal string "an array" */
 export const AN_ARRAY = AN_ + ARRAY;
+
+/** @constant {string} AN_OBJECT The literal string "an object" */
+export const AN_OBJECT = AN_ + OBJECT;
 
 /** @constant {string} IS_ The literal string "is " */
 export const IS_ = 'is ';
@@ -113,6 +131,9 @@ export const _IS_NOT_ = ' is' + _NOT_;
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 export const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
+
+/** @constant {string} _NOT_A_REGULAR_ The literal string " not a regular " */
+export const _NOT_A_REGULAR_ = _NOT_ + 'a regular ';
 
 /** @constant {string} _NOT_TYPE_ The literal string " not type " */
 export const _NOT_TYPE_ = _NOT_ + TYPE_;

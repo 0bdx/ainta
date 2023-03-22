@@ -4,6 +4,12 @@
  * @typedef {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} TypeOf
  */
 
+// /**
+//  * ### Extends JavaScript types, adding useful extras like "any" and "null".
+//  *
+//  * @typedef {TypeOf|'any'|'array'|'nan'|'null'} Kind
+//  */
+
 /**
  * ### A configuration object, used by all `ainta` functions.
  * 
@@ -33,14 +39,20 @@
  *    Optional modulo which `value` must divide into without a remainder.
  * @property {number} [most]
  *    Optional maximum length of an array.
+ * @property {boolean} [open]
+ *    Optional flag. If true, an object can contain 'extra' properties -
+ *    that is, key/value pairs not described in `options.schema`.
  * @property {boolean} [pass]
  *    Optional flag. If true, array items are validated using `options`.
  * @property {Rxish} [rx]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+ * @property {Schema} [schema]
+ *    Optional object which describes an object.
  * @property {TypeOf} [type]
  *    Optional JavaScript type to expect, eg "boolean" or "undefined".
  * @property {TypeOf[]} [types]
  *    Optional array of JS types to expect, eg ["bigint","number"].
+ *    If missing, the property is allowed to be any type.
  */
 
 /**
@@ -50,6 +62,23 @@
  * @property {function(string):boolean} test
  *    The test function, which takes a string and returns `true` if it passes
  *    and `false` if it fails.
+ */
+
+/**
+ * ### An object which describes a single property of an object.
+ * 
+ * @typedef {object} Property
+ * @property {TypeOf[]} [types=[]]
+ *    Optional array of types which are allowed, eg ["string","undefined"].
+ *    - If `"undefined"` is included in the array, the property is optional
+ *    - If empty, the property is allowed to be any type including 'undefined'
+ *    - Defaults to an empty array
+ */
+
+/**
+w * ### An object which describes an object's properties.
+ * 
+ * @typedef {Object.<string, Property>} Schema
  */
 
 /**

@@ -54,6 +54,11 @@ export type Options = {
      */
     most?: number;
     /**
+     * Optional flag. If true, an object can contain 'extra' properties -
+     * that is, key/value pairs not described in `options.schema`.
+     */
+    open?: boolean;
+    /**
      * Optional flag. If true, array items are validated using `options`.
      */
     pass?: boolean;
@@ -62,11 +67,16 @@ export type Options = {
      */
     rx?: Rxish;
     /**
+     * Optional object which describes an object.
+     */
+    schema?: Schema;
+    /**
      * Optional JavaScript type to expect, eg "boolean" or "undefined".
      */
     type?: TypeOf;
     /**
      * Optional array of JS types to expect, eg ["bigint","number"].
+     * If missing, the property is allowed to be any type.
      */
     types?: TypeOf[];
 };
@@ -79,6 +89,24 @@ export type Rxish = {
      *    and `false` if it fails.
      */
     test: (arg0: string) => boolean;
+};
+/**
+ * ### An object which describes a single property of an object.
+ */
+export type Property = {
+    /**
+     * Optional array of types which are allowed, eg ["string","undefined"].
+     * - If `"undefined"` is included in the array, the property is optional
+     * - If empty, the property is allowed to be any type including 'undefined'
+     * - Defaults to an empty array
+     */
+    types?: TypeOf[];
+};
+/**
+ * w * ### An object which describes an object's properties.
+ */
+export type Schema = {
+    [x: string]: Property;
 };
 /**
  * ### Validates a value using JavaScript's native `Array.isArray()`.
@@ -216,6 +244,48 @@ export function aintaNull(value: any, identifier?: string, options?: Options): f
  *    Also returns an explanation if any of the `options` it uses are invalid.
  */
 export function aintaNumber(value: any, identifier?: string, options?: Options): false | string;
+/**
+ * ### Validates that a value is a regular JavaScript object.
+ *
+ * If the first argument passed to `aintaObject()` ain't an object, it returns
+ * a short explanation of what went wrong.
+ *
+ * Else, if the object does not conform to `options.schema`, it also returns an
+ * explanation of what went wrong.
+ *
+ * Otherwise, `aintaObject()` returns `false`.
+ *
+ * @TODO `aintaDictionary()`, which has `options.keys` and `options.values`.
+ *
+ * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
+ * doesn't consider `null` or an array to be an object.
+ *
+ * @example
+ * import { aintaObject } from '@0bdx/ainta';
+ *
+ * aintaObject({ red:0xFF0000 }, 'palette', { open:true });
+ * // false
+ *
+ * aintaObject([]);
+ * // "A value is an array not type 'object'"
+ *
+ * aintaObject(null, 'lookup', { begin:'processLookup()' });
+ * // "processLookup(): `lookup` is null not an object"
+ *
+ * const schema = { red: { rx:/^#[a-f0-9]{6}$/i, types:['string'] } };
+ * aintaObject({ red:0xFF0000 }, 'palette', { schema });
+ * // "`palette.red` is type 'number' not 'string'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+export function aintaObject(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates a string.
  *

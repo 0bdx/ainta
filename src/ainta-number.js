@@ -1,6 +1,7 @@
 import aintaType from './ainta-type.js';
 import {
     _IS_NOT_,
+    _NOT_A_REGULAR_,
     CANNOT_OPTIONS,
     GTE,
     IS_NAN,
@@ -84,7 +85,7 @@ export default function aintaNumber(
         // `typeof value` is 'number' but it could be `NaN`, so use `isNaN()`
         // to check. Note that `Number.isNaN()` is not necessary in this case.
         : isNaN(value)
-            ? IS_NAN
+            ? IS_NAN + _NOT_A_REGULAR_ + NUMBER
 
             // Compare `value` with the 'Greater Than or Equal' option, if set.
             : hasGte && optionsGte > value
@@ -173,9 +174,9 @@ export function aintaNumberTest(f) {
     equal(f(Number('33.333'), "Number('33.333')", { begin:'Number Test' }),
         false);
     equal(f(NaN),
-        "A value is the special `NaN` value");
+        "A value is the special `NaN` value not a regular number");
     equal(f(parseInt('abc', 10), 'abc', {}),
-        "`abc` is the special `NaN` value");
+        "`abc` is the special `NaN` value not a regular number");
     equal(f(void 0, null, { begin:'Number Test' }),
         "Number Test: A value is type 'undefined' not 'number'");
     equal(f(BigInt(99)),
@@ -293,7 +294,7 @@ export function aintaNumberTest(f) {
         false);
     // @ts-expect-error
     equal(f(NaN, '1%', { begin:['a','b','c'] }),
-        "a,b,c: `1%` is the special `NaN` value");
+        "a,b,c: `1%` is the special `NaN` value not a regular number");
 
     // `options.gte`, `.lte` and `.mod` are ignored if set to `undefined`.
     equal(f(0, 'gte', { gte:void 0 }),
@@ -303,7 +304,7 @@ export function aintaNumberTest(f) {
     equal(f(0, 'lte', { lte:undefined }),
         false);
     equal(f(NaN, 'lte', { lte:undefined }),
-        "`lte` is the special `NaN` value");
+        "`lte` is the special `NaN` value not a regular number");
     equal(f(0, 'mod', { gte:0, mod:({}).nope }),
         false);
     equal(f(-0.001, 'mod', { gte:0, mod:({}).nope }),

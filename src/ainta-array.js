@@ -106,7 +106,7 @@ export default function aintaArray(
 
     // If `options.least` and `options.most` are both being used, but `least` is
     // more than `most`, return a helpful result.
-    || (hasLeast && hasMost && optionsLeast > optionsMost
+     || (hasLeast && hasMost && optionsLeast > optionsMost
         ? CANNOT_OPTIONS + 'least` > `options.most`'
 
         // Check that the length is not less than `options.least`, if set.
@@ -130,6 +130,9 @@ export default function aintaArray(
 function validateEveryItem(value, length, options, hasTypes, identifier) {
     const { begin, pass, types } = options;
 
+    // If no types are defined, the item can be any type, or even `undefined`.
+    const definesTypes = hasTypes && types.length;
+
     // Step through each item in the `value` array.
     for (let i=0; i<length; i++) {
         const item = value[i];
@@ -138,7 +141,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
 
         // If the item's type is not included in `options.types`, return an
         // explanation of the problem.
-        if (hasTypes && !types.includes(type)) {
+        if (definesTypes && types.indexOf(type) === -1) {
             const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
@@ -272,8 +275,6 @@ export function aintaArrayTest(f) {
     // @ts-expect-error
     equal(f([6], 'six', { types:['string','bigint','Number','undefined'] }),
         "`six` cannot be validated, `options.types[2]` 'Number' not known");
-    equal(f([7], 'seven', { types:[] }),
-        "`seven` cannot be validated, `options.types` is empty");
 
     // Typical usage without `options.least`, `.most`, `.pass` or `.types`.
     equal(f([]),
@@ -323,7 +324,7 @@ export function aintaArrayTest(f) {
 
     // Typical `options.pass` usage.
     equal(f([0,-Infinity,NaN], 'numbers', { pass:true }),
-        "`numbers[2]` is the special `NaN` value");
+        "`numbers[2]` is the special `NaN` value not a regular number");
     equal(f([0,-Infinity,NaN], 'numbers', { pass:false }),
         false);
     equal(f([0,-1,-10], void 0, { begin:'Numbers', gte:0, pass:true }),
@@ -333,6 +334,47 @@ export function aintaArrayTest(f) {
     equal(f([0,-10,100,11], 'multiples_of_10', { begin:'Numbers', mod:10, pass:true }),
         "Numbers: `multiples_of_10[3]` 11 is not divisible by 10");
     equal(f([0,-10,100,11], 'multiples_of_10', { begin:'Numbers', mod:10, pass:false }),
+        false);
+
+    // Basic `options.schema` usage - properties can be any type.
+    const everyType = [{},null,[],Math,/a/,()=>0,1,NaN,'a',false,void 0,BigInt(1),Symbol('a')];
+    equal(f(everyType, 'everyType', { begin:'Anything goes', types:[] }),
+        false);
+
+    // Typical `options.types` usage - items must be of one type.
+    equal(f([0,false,[],'three'], `bool_array`, { begin:' ', types:['boolean'] }),
+        " : `bool_array[0]` is type 'number', not the `options.types` 'boolean'");
+    equal(f([,,,[]], 'ok', { types:['undefined'] }),
+        "`ok[3]` is an array, not the `options.types` 'undefined'");
+    equal(f([void 0,null], '', { begin:'All undefined', types:['undefined'] }),
+        "All undefined: `[1] of an array` is null, not the `options.types` 'undefined'");
+    equal(f([{},null,[],Math], 'objs', { begin:'All objects', types:['object'] }),
+        false);
+
+    // Typical `options.types` usage - items must be of two types.
+    equal(f(['0',null], 'bool_and_str_array', { types:['boolean','string'] }),
+        "`bool_and_str_array[1]` is null, not one of the `options.types` 'boolean:string'");
+    equal(f(['0',false,[],'three'], null, { types:['boolean','string'] }),
+        "`[2] of an array` is an array, not one of the `options.types` 'boolean:string'");
+    equal(f([-0,NaN,Infinity,BigInt(77)], void 0, { begin:'All numeric', types:['number','bigint'] }),
+        false);
+
+    // Using `options.pass` with an empty `options.types`.
+    equal(f(everyType, '', {
+        min:2, lte:0, pass:true, types:[] }),
+        "`[6] of an array` 1 is not lte 0");
+    equal(f(everyType, 'everyType', {
+        min:2, lte:1, pass:true, types:[] }),
+        "`everyType[7]` is the special `NaN` value not a regular number");
+    equal(f(everyType, undefined, { begin: 'Every Type',
+        min:2, pass:true, types:[] }),
+        "Every Type: `[7] of an array` is the special `NaN` value not a regular number");
+    everyType[7] = 2;
+    equal(f(everyType, 'everyType', { begin: 'Every Type',
+        min:2, pass:true, types:[] }),
+        "Every Type: `everyType[8]` 'a' is not min 2");
+    equal(f(everyType, '', {
+        min:1, pass:true, types:[] }),
         false);
 
     // Using `options.pass` and `options.types` together.
@@ -347,22 +389,6 @@ export function aintaArrayTest(f) {
         false);
     equal(f([-1,'',0,77], '', { begin:'negative or non-empty str',
         lte:0, min:1, pass:false, types:['number','string'] }), // pass is false
-        false);
-
-    // Typical `options.types` usage.
-    equal(f(['0',null], 'bool_and_str_array', { types:['boolean','string'] }),
-        "`bool_and_str_array[1]` is null, not one of the `options.types` 'boolean:string'");
-    equal(f(['0',false,[],'three'], null, { types:['boolean','string'] }),
-        "`[2] of an array` is an array, not one of the `options.types` 'boolean:string'");
-    equal(f([0,false,[],'three'], `bool_array`, { begin:' ', types:['boolean'] }),
-        " : `bool_array[0]` is type 'number', not the `options.types` 'boolean'");
-    equal(f([,,,[]], 'ok', { types:['undefined'] }),
-        "`ok[3]` is an array, not the `options.types` 'undefined'");
-    equal(f([void 0,null], '', { begin:'All undefined', types:['undefined'] }),
-        "All undefined: `[1] of an array` is null, not the `options.types` 'undefined'");
-    equal(f([{},null,[],Math], 'objs', { begin:'All objects', types:['object'] }),
-        false);
-    equal(f([-0,NaN,Infinity,BigInt(77)], void 0, { begin:'All numeric', types:['number','bigint'] }),
         false);
 
     // Extra `options` values cause TS errors, but do not prevent normal use.

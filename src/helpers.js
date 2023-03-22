@@ -2,10 +2,10 @@ import {
     _NOT_,
     _NOT_AN_ARRAY,
     _NOT_TYPE_,
+    AN_ARRAY,
     BIGINT,
     BOOLEAN,
     CANNOT_OPTIONS,
-    ENUM,
     FUNCTION,
     IS_AN_ARRAY,
     IS_NAN,
@@ -15,6 +15,7 @@ import {
     OBJECT,
     STRING,
     SYMBOL,
+    TYPES,
     UNDEFINED,
 } from './constants.js';
 
@@ -141,8 +142,8 @@ export const validateArrayOfStringsOption = (key, val, has, allTypes) => {
             ? IS_NULL + _NOT_AN_ARRAY
             : !isArray(val)
                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : !val.length
-                    ? 'is empty'
+                : !allTypes && !val.length
+                    ? 'is empty' // eg for `options.enum`
                     : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
         for (let i=0, l=val.length; i<l; i++) {
@@ -251,5 +252,71 @@ export const validateRxishOption = (val, has) => {
                     ? IS_TYPE_ + quote(typeof fn) + _NOT_ + QF
                     : '';
         if (result) return CANNOT_OPTIONS + 'rx.test` ' + result;
+    }    
+};
+
+/**
+ * ### Validates an option which describes an object.
+ * @private
+ * 
+ * @TODO refactor, it's too long a repetitive
+ *
+ * @param {any} schema
+ *    The value of the option, which must be an object to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ */
+export const validateSchemaOption = (schema, has) => {
+    if (has) {
+        let result = schema === null
+            ? IS_NULL + _NOT_TYPE_ + QO
+            : isArray(schema)
+                ? IS_AN_ARRAY + _NOT_TYPE_ + QO
+                : typeof schema !== OBJECT
+                    ? IS_TYPE_ + quote(typeof schema) + _NOT_ + QO
+                    : '';
+        if (result) return CANNOT_OPTIONS + 'schema` ' + result;
+        for (const propertyName in schema) {
+            const property = schema[propertyName];
+            result = property === null
+                ? '` ' + IS_NULL + _NOT_TYPE_ + QO
+                : isArray(property)
+                    ? '` ' + IS_AN_ARRAY + _NOT_TYPE_ + QO
+                    : typeof property !== OBJECT
+                        ? '` ' + IS_TYPE_ + quote(typeof property) + _NOT_ + QO
+                        : '';
+            if (!result) {
+                there: for (const key in property) {
+                    const val = property[key];
+                    switch (key) {
+                        case TYPES:
+                            result = val === null
+                                ? '.' + TYPES + '` ' + IS_NULL + _NOT_ + AN_ARRAY
+                                : !isArray(val)
+                                    ? '.' + TYPES + '` ' + IS_TYPE_ + quote(typeof val) + _NOT_ + AN_ARRAY
+                                    : '';
+                            if (!result) {
+                                for (let i=0, l=val.length; i<l; i++) {
+                                    const item = val[i];
+                                    result = item === null
+                                        ? IS_NULL + _NOT_TYPE_ + QS
+                                        : isArray(item)
+                                            ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                                            : typeof item !== STRING
+                                                ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
+                                                : !isRecognisedType(item)
+                                                    ? saq(item) + _NOT_ + 'known'
+                                                    : '';
+                                    if (result) {
+                                        result = '.' + key + '[' + i + ']` ' + result;
+                                        break there;
+                                    }
+                                }                    
+                            }
+                    }
+                }
+            }
+            if (result) return CANNOT_OPTIONS + 'schema.' + propertyName + result;
+        }
     }    
 };
