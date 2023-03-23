@@ -38,7 +38,6 @@
   "homepage": "https://github.com/0bdx/ainta#readme",
   "devDependencies": {
     "@0bdx/build-helpers": "^0.0.4",
-    "@rollup/plugin-replace": "^5.0.2",
     "@rollup/plugin-terser": "^0.4.0",
     "rollup": "^3.18.0"
   }

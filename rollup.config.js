@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import * as bh from '@0bdx/build-helpers';
-import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
 
 // Use @0bdx/build-helpers to generate 'basic library' Rollup configuration.
@@ -47,26 +46,46 @@ const config = {
         }
     ],
 
-    // When generated, `ainta.js` contains multiple instances of:
-    //    import('./options').Options
-    // These cause TS errors, so must be replaced by:
-    //    Options
-    //
-    // This works because we have rolled-up the source into a single file -
-    // the `@typedef {object} Options ...` is at the top of that file.
-    //
-    // Note that this solution also fixes an issue in `ainta.d.ts`.
-    // Was:
-    //    options?: any
-    // Now:
-    //    options?: Options
-    plugins: [replace({
-        "import('./options').": '',
+    plugins: [ fixJSDoc() ]
+}
 
-        // Prevent the "(!) Plugin replace: @rollup/plugin-replace: ... will
-        // default this option to `true`." message.
-        preventAssignment: true,
-    })]
+// Fixes typings issues.
+//
+// 1. Fixes `import('./options')` issue:
+// When generated, `ainta.js` contains multiple instances of:
+//    import('./options').Options
+// These cause TS errors, so must be replaced by:
+//    Options
+// This works because we have rolled-up the source into a single file -
+// the `@typedef {object} Options ...` is at the top of that file.
+//
+// 2. Fixes `options?: any` issue:
+// The above solution also fixes an issue in `ainta.d.ts`.
+// Was:
+//    options?: any
+// Now:
+//    options?: Options
+//
+function fixJSDoc() {
+    return {
+        name: 'fix-js-doc',
+        transform(source, id) {
+            if (id.slice(-3) !== '.js') return null; // only transform JavaScript
+            return source.replace(/import\('\.\/options'\)\./g, '');
+        }
+    }
 }
 
 export default config;
+
+
+// @TODO run this transform on the generated `ainta.d.ts`
+//
+// Fixes `@typedef ... Ainta` issue
+//
+// This workaround corrects types for the functions returned by `narrowAintas()`.
+//
+// .replace(
+//     'export type Ainta = Function;',
+//     'export type Ainta = (value: any, identifier?: string, options?: Options) => false | string;'
+// )

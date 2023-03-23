@@ -67,7 +67,7 @@ import emptyOptions from './options.js';
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {import('./options').Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -112,7 +112,7 @@ export default function aintaObject(
  * @param {object} obj
  *    The object to validate.
  * @param {import('./options').Options} options
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
  * @param {boolean} hasSchema
  *    `true` if `options.schema` is present.
  * @param {string} identifier

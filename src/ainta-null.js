@@ -30,7 +30,7 @@ import emptyOptions from './options.js';
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {import('./options').Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */

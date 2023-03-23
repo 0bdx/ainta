@@ -561,7 +561,7 @@ const emptyOptions = {};
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if `options.type` is invalid.
@@ -637,7 +637,7 @@ function aintaType(
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if any of the `options` it uses are invalid.
@@ -735,7 +735,7 @@ function aintaNumber(
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if any of the `options` it uses are invalid.
@@ -834,7 +834,7 @@ function aintaString(
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -973,7 +973,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -1009,7 +1009,7 @@ function aintaBoolean(
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -1067,7 +1067,7 @@ function aintaNull(
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -1112,7 +1112,7 @@ function aintaObject(
  * @param {object} obj
  *    The object to validate.
  * @param {Options} options
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
  * @param {boolean} hasSchema
  *    `true` if `options.schema` is present.
  * @param {string} identifier
@@ -1184,7 +1184,16 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
 }
 
 /** Any one of `ainta`'s validation functions.
- * @typedef {function(any, string?, Options?):string|false} Ainta */
+ * @typedef {Function} Ainta
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
 
 /**
  * ### Narrows any number of `ainta` functions, and aggregates their results.
@@ -1225,7 +1234,7 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
  * // "a and b are both natural numbers, in range!"
  *
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @param {...Ainta} aintas
  *    Any number of `ainta` functions, to apply `options` to.
  * @returns {[string[], ...Ainta[]]}

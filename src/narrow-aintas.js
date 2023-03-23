@@ -1,7 +1,16 @@
 import emptyOptions from './options.js';
 
 /** Any one of `ainta`'s validation functions.
- * @typedef {function(any, string?, import('./options').Options?):string|false} Ainta */
+ * @typedef {Function} Ainta
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {import('./options').Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
 
 /**
  * ### Narrows any number of `ainta` functions, and aggregates their results.
@@ -42,7 +51,7 @@ import emptyOptions from './options.js';
  * // "a and b are both natural numbers, in range!"
  *
  * @param {import('./options').Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @param {...Ainta} aintas
  *    Any number of `ainta` functions, to apply `options` to.
  * @returns {[string[], ...Ainta[]]}

@@ -1,7 +1,7 @@
 /**
  * Any one of `ainta`'s validation functions.
  */
-export type Ainta = (arg0: any, arg1: string | null, arg2: Options | null) => string | false;
+export type Ainta = Function;
 /**
  * ### JavaScript type to expect, eg "boolean" or "undefined".
  */
@@ -143,7 +143,7 @@ export type Schema = {
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -171,7 +171,7 @@ export function aintaArray(value: any, identifier?: string, options?: Options): 
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -199,7 +199,7 @@ export function aintaBoolean(value: any, identifier?: string, options?: Options)
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -238,7 +238,7 @@ export function aintaNull(value: any, identifier?: string, options?: Options): f
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if any of the `options` it uses are invalid.
@@ -281,7 +281,7 @@ export function aintaNumber(value: any, identifier?: string, options?: Options):
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -324,7 +324,7 @@ export function aintaObject(value: any, identifier?: string, options?: Options):
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if any of the `options` it uses are invalid.
@@ -361,14 +361,23 @@ export function aintaString(value: any, identifier?: string, options?: Options):
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  *    Also returns an explanation if `options.type` is invalid.
  */
 export function aintaType(value: any, identifier?: string, options?: Options): false | string;
 /** Any one of `ainta`'s validation functions.
- * @typedef {function(any, string?, Options?):string|false} Ainta */
+ * @typedef {Function} Ainta
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
 /**
  * ### Narrows any number of `ainta` functions, and aggregates their results.
  *
@@ -408,7 +417,7 @@ export function aintaType(value: any, identifier?: string, options?: Options): f
  * // "a and b are both natural numbers, in range!"
  *
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
  * @param {...Ainta} aintas
  *    Any number of `ainta` functions, to apply `options` to.
  * @returns {[string[], ...Ainta[]]}
