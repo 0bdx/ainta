@@ -77,15 +77,3 @@ function fixJSDoc() {
 }
 
 export default config;
-
-
-// @TODO run this transform on the generated `ainta.d.ts`
-//
-// Fixes `@typedef ... Ainta` issue
-//
-// This workaround corrects types for the functions returned by `narrowAintas()`.
-//
-// .replace(
-//     'export type Ainta = Function;',
-//     'export type Ainta = (value: any, identifier?: string, options?: Options) => false | string;'
-// )

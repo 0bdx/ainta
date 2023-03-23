@@ -15,7 +15,8 @@
   "scripts": {
     "build:prod": "rollup -c",
     "build:types": "tsc ainta.js --allowJs --declaration --emitDeclarationOnly",
-    "build": "for s in {prod,types};do npm run build:$s;done",
+    "build:workaround": "node workaround.js",
+    "build": "for s in {prod,types,workaround};do npm run build:$s;done",
     "preflight:test": "echo \"🧬 test.js\" && node test.js",
     "preflight:types": "tsc ainta.js --allowJs --checkJs --noEmit",
     "preflight": "for s in {test,types};do npm run preflight:$s;done",

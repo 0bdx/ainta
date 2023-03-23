@@ -1,7 +1,7 @@
 /**
  * Any one of `ainta`'s validation functions.
  */
-export type Ainta = Function;
+export type Ainta = (value: any, identifier?: string, options?: Options) => false | string;
 /**
  * ### JavaScript type to expect, eg "boolean" or "undefined".
  */
