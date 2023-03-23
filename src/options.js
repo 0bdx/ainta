@@ -65,20 +65,9 @@
  */
 
 /**
- * ### An object which describes a single property of an object.
+ * ### An object which describes an object's properties.
  * 
- * @typedef {object} Property
- * @property {TypeOf[]} [types=[]]
- *    Optional array of types which are allowed, eg ["string","undefined"].
- *    - If `"undefined"` is included in the array, the property is optional
- *    - If empty, the property is allowed to be any type including 'undefined'
- *    - Defaults to an empty array
- */
-
-/**
-w * ### An object which describes an object's properties.
- * 
- * @typedef {Object.<string, Property>} Schema
+ * @typedef {Object.<string, Options>} Schema
  */
 
 /**

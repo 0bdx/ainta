@@ -504,20 +504,9 @@ const validateSchemaOption = (schema, has) => {
  */
 
 /**
- * ### An object which describes a single property of an object.
+ * ### An object which describes an object's properties.
  * 
- * @typedef {object} Property
- * @property {TypeOf[]} [types=[]]
- *    Optional array of types which are allowed, eg ["string","undefined"].
- *    - If `"undefined"` is included in the array, the property is optional
- *    - If empty, the property is allowed to be any type including 'undefined'
- *    - Defaults to an empty array
- */
-
-/**
-w * ### An object which describes an object's properties.
- * 
- * @typedef {Object.<string, Property>} Schema
+ * @typedef {Object.<string, Options>} Schema
  */
 
 /**
@@ -1137,12 +1126,10 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
                     result = [key, IS_ + 'missing'];
                     break;
                 }
-                continue;
-            }
 
-            // Otherwise, if the val's type is not included in `options.types`,
+            // Otherwise, if the val's type is not included in `schema.types`,
             // return an explanation of the problem.
-            if (types.indexOf(type) === -1) {
+            } else if (types.indexOf(type) === -1) {
                 const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
                 result = [key, IS_ + (
                     val === null
@@ -1157,9 +1144,28 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
                     )
                 ];
                 break;
+
+            // The val's type is included in `schema.types`, but the item may
+            // still be invalid.
+            } else {
+                const valIdentifier = identifier
+                    ? identifier + '.' + key
+                    : key + _OF_ + AN_OBJECT;
+                const ainta = {
+                    number: aintaNumber,
+                    string: aintaString,
+                }[type];
+                if (ainta) {
+                    const result = ainta(
+                        val,
+                        valIdentifier,
+                        { begin:options.begin, ...schema[key] },
+                    );
+                    if (result) return result;
+                }
             }
 
-            // @TODO `options.pass` and nested schemas
+            // @TODO nested schemas
         }
     }
 

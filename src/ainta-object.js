@@ -1,3 +1,5 @@
+import aintaNumber from './ainta-number.js';
+import aintaString from './ainta-string.js';
 import {
     _BT_OPTIONS_DOT,
     _IS_NOT_,
@@ -13,8 +15,10 @@ import {
     IS_NULL,
     IS_TYPE_,
     NULL,
+    NUMBER,
     OBJECT,
     OPEN,
+    STRING,
     TYPE_,
     TYPES,
     UNDEFINED,
@@ -137,12 +141,10 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
                     result = [key, IS_ + 'missing'];
                     break;
                 }
-                continue;
-            }
 
-            // Otherwise, if the val's type is not included in `options.types`,
+            // Otherwise, if the val's type is not included in `schema.types`,
             // return an explanation of the problem.
-            if (types.indexOf(type) === -1) {
+            } else if (types.indexOf(type) === -1) {
                 const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
                 result = [key, IS_ + (
                     val === null
@@ -157,9 +159,28 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
                     )
                 ];
                 break;
+
+            // The val's type is included in `schema.types`, but the item may
+            // still be invalid.
+            } else {
+                const valIdentifier = identifier
+                    ? identifier + '.' + key
+                    : key + _OF_ + AN_OBJECT
+                const ainta = {
+                    number: aintaNumber,
+                    string: aintaString,
+                }[type];
+                if (ainta) {
+                    const result = ainta(
+                        val,
+                        valIdentifier,
+                        { begin:options.begin, ...schema[key] },
+                    );
+                    if (result) return result;
+                }
             }
 
-            // @TODO `options.pass` and nested schemas
+            // @TODO nested schemas
         }
     }
 
@@ -185,7 +206,7 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
 
 /**
  * aintaObject() unit tests.
- * 
+ *
  * @param {aintaObject} f
  *    The `aintaObject()` function to test.
  * @returns {void}
@@ -346,6 +367,8 @@ export function aintaObjectTest(f) {
     equal(f({ a:null, b:null }, void 0, { begin:'Optional', schema }),
         "Optional: `a of an object` is null, not one of the `options.types` 'number:undefined'");
     equal(f({ a:NaN, b:false }, 'o', { begin:'?', schema }),
+        "?: `o.a` is the special `NaN` value not a regular number");
+    equal(f({ a:123, b:false }, 'o', { begin:'?', schema }),
         "?: `o.b` is type 'boolean', not one of the `options.types` 'string:symbol:undefined'");
     equal(f({ a:Infinity, b:[] }, '..', { schema }),
         "`...b` is an array, not one of the `options.types` 'string:symbol:undefined'");
@@ -356,5 +379,27 @@ export function aintaObjectTest(f) {
     equal(f({}, 'ok', { schema }),
         false);
 
-    // @TODO extra-options tests
+    // `options.schema` - using 'number' options.
+    schema = { n:{ gte:77, lte:99, mod:10, types:['number'] } }; // must be 80 or 90
+    equal(f({ n:123 }, '', { schema }),
+        "`n of an object` 123 is not lte 99");
+    equal(f({ n:0 }, 'zero', { schema }),
+        "`zero.n` 0 is not gte 77");
+    equal(f({ n:95 }, 'ninety_five', { begin:'Number opts', schema }),
+        "Number opts: `ninety_five.n` 95 is not divisible by 10");
+    equal(f({ n:80 }, 'eighty', { schema }),
+        false);
+
+    // `options.schema` - using 'string' options.
+    schema = { str:{ enum:['a','aa','AAA','aaaa','aaaaa'], max:4, min:2, rx:/a/, types:['string'] } };
+    equal(f({ str:'aaaaa' }, '', { schema }),
+        "`str of an object` 'aaaaa' is not max 4");
+    equal(f({ str:'a' }, 'a', { schema }),
+        "`a.str` 'a' is not min 2");
+    equal(f({ str:'AAA' }, 'caps', { begin:'String opts', schema }),
+        "String opts: `caps.str` 'AAA' fails /a/");
+    equal(f({ str:'aaa' }, void 0, { begin:'String opts', schema }),
+        "String opts: `str of an object` 'aaa' is not in 'a:aa:AAA:aaaa:aaaaa'");
+    equal(f({ str:'aa' }, 'double_a', { schema }),
+        false);
 }

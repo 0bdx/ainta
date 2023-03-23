@@ -91,22 +91,10 @@ export type Rxish = {
     test: (arg0: string) => boolean;
 };
 /**
- * ### An object which describes a single property of an object.
- */
-export type Property = {
-    /**
-     * Optional array of types which are allowed, eg ["string","undefined"].
-     * - If `"undefined"` is included in the array, the property is optional
-     * - If empty, the property is allowed to be any type including 'undefined'
-     * - Defaults to an empty array
-     */
-    types?: TypeOf[];
-};
-/**
- * w * ### An object which describes an object's properties.
+ * ### An object which describes an object's properties.
  */
 export type Schema = {
-    [x: string]: Property;
+    [x: string]: Options;
 };
 /**
  * ### Validates a value using JavaScript's native `Array.isArray()`.
