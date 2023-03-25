@@ -1,6 +1,6 @@
 {
   "name": "@0bdx/ainta",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Utilities for validating values in 0bdx apps, libraries and websites.",
   "type": "module",
   "files": [
@@ -18,7 +18,7 @@
     "build:workaround": "node workaround.js",
     "build": "for s in {prod,types,workaround};do npm run build:$s;done",
     "preflight:test": "echo \"🧬 test.js\" && node test.js",
-    "preflight:types": "tsc ainta.js --allowJs --checkJs --noEmit",
+    "preflight:types": "tsc ainta.js --allowJs --checkJs --noEmit --lib es2017",
     "preflight": "for s in {test,types};do npm run preflight:$s;done",
     "test": "echo \"🧪 src/test.js\" && node src/test.js"
   },
