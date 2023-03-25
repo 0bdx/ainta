@@ -73,7 +73,7 @@ export default function aintaString(
     // If `options.enum`, `.max`, `.min` or `.rx` are invalid, return a
     // helpful result. Note that setting these to `undefined` may be useful in
     // some cases, so that `{ max:undefined }` acts the same way as `{}`, which
-    // is why we use `options.max !== undefined` instead of `"max" in options`.
+    // is why we use `options.max !== void 0` instead of `"max" in options`.
     const optionsEnum = options.enum;
     const hasEnum = optionsEnum !== void 0;
     const optionsMax = options.max;

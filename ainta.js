@@ -90,6 +90,9 @@ const AN_ = 'an ';
 /** @constant {string} AN_ARRAY The literal string "an array" */
 const AN_ARRAY = AN_ + ARRAY;
 
+/** @constant {string} A_DICTIONARY The literal string "a dictionary" */
+const A_DICTIONARY = 'a dictionary';
+
 /** @constant {string} AN_OBJECT The literal string "an object" */
 const AN_OBJECT = AN_ + OBJECT;
 
@@ -644,7 +647,7 @@ function aintaNumber(
     // If `options.gte`, `.lte` or `.mod` are invalid, return a helpful result.
     // Note that setting these to `undefined` may be useful in some cases, so
     // that `{ gte:undefined }` acts the same way as `{}`, which is why we use
-    // `options.gte !== undefined` instead of `"gte" in options`.
+    // `options.gte !== void 0` instead of `"gte" in options`.
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
     const optionsLte = options.lte;
@@ -742,7 +745,7 @@ function aintaString(
     // If `options.enum`, `.max`, `.min` or `.rx` are invalid, return a
     // helpful result. Note that setting these to `undefined` may be useful in
     // some cases, so that `{ max:undefined }` acts the same way as `{}`, which
-    // is why we use `options.max !== undefined` instead of `"max" in options`.
+    // is why we use `options.max !== void 0` instead of `"max" in options`.
     const optionsEnum = options.enum;
     const hasEnum = optionsEnum !== void 0;
     const optionsMax = options.max;
@@ -806,7 +809,7 @@ function aintaString(
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  * 
- * aintaArray([1, 2, 3]);
+ * aintaArray([1, 'two', 3], 'a', { types:['number','string'] });
  * // false
  *
  * aintaArray({});
@@ -815,8 +818,8 @@ function aintaString(
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
  *
- * aintaArray([1, true, 'ok'], 'num_or_str', { types:['number','string'] });
- * // "`num_or_str[1]` is type 'boolean' not 'number:string'"
+ * aintaArray([1, true, 'ok'], 'a', { types:['number','string'] });
+ * // "`a[1]` is type 'boolean', not one of the `options.types` 'number:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -846,7 +849,7 @@ function aintaArray(
     // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
     // helpful result. Note that setting these to `undefined` may be useful in
     // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
-    // is why we use `options.most !== undefined` instead of `"most" in options`.
+    // is why we use `options.most !== void 0` instead of `"most" in options`.
     const optionsLeast = options.least;
     const hasLeast = optionsLeast !== void 0;
     const optionsMost = options.most;
@@ -976,6 +979,164 @@ function aintaBoolean(
 }
 
 /**
+ * ### Validates that a value is a simple object of key/value pairs.
+ *
+ * A ‘dictionary’ is a JavaScript object with arbitrary key/value pairs. Often,
+ * all the values will be of the same type - eg, Node.js's `process.env` object,
+ * where every value is a string.
+ *
+ * If the first argument passed to `aintaDictionary()` ain't a dictionary, it
+ * returns a short explanation of what went wrong.
+ *
+ * Else, if the dictionary fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.least` - if set, there must be at least this number of properties
+ * - `options.most` - if set, there must not be more than this number of properties
+ * - `options.pass` - if set, each property is validated more deeply using `options`
+ * - `options.types` - if set, all values must be one of these types
+ *
+ * Otherwise, `aintaDictionary()` returns `false`.
+ *
+ * @example
+ * import { aintaDictionary } from '@0bdx/ainta';
+ * 
+ * aintaDictionary({ zero:0, one:1 }, 'all_num', { types:['number'] });
+ * // false
+ *
+ * aintaDictionary([]);
+ * // "A value is an array, not type 'object'"
+ *
+ * aintaDictionary(null, 'lookupTable', { begin:'processLUT()' });
+ * // "processLUT(): `lookupTable` is null not a dictionary"
+ *
+ * aintaDictionary({ zero:0, one:'1' }, 'all_num', { types:['number'] });
+ * // "`all_num[1]` is type 'string', not the `options.types` 'number'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaDictionary(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Check that `value` is a regular JavaScript object. If not, bail out.
+    let result = value === null
+        ? IS_NULL + _NOT_A_REGULAR_ + OBJECT
+        : isArray(value)
+            ? IS_AN_ARRAY + _NOT_A_REGULAR_ + OBJECT
+            : typeof value !== OBJECT
+                ? IS_TYPE_ + quote(typeof value) + _NOT_ + QO
+                : ''
+    ;
+    if (result) return buildResultPrefix(options.begin, identifier) + result;
+
+    // Will probably be needed several times, below.
+    const entries = Object.entries(value);
+    const length = entries.length;
+
+    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
+    // helpful result. Note that setting these to `undefined` may be useful in
+    // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
+    // is why we use `options.most !== void 0` instead of `"most" in options`.
+    const optionsLeast = options.least;
+    const hasLeast = optionsLeast !== void 0;
+    const optionsMost = options.most;
+    const hasMost = optionsMost !== void 0;
+    const optionsPass = options.pass;
+    const hasPass = optionsPass !== void 0;
+    const optionsTypes = options.types;
+    const hasTypes = optionsTypes !== void 0;
+    result =
+        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+     || validateNumericOption(MOST, optionsMost, hasMost, false, true)
+     || validateBooleanOption(PASS, optionsPass, hasPass)
+     || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
+
+    // If `options.least` and `options.most` are both being used, but `least` is
+    // more than `most`, return a helpful result.
+     || (hasLeast && hasMost && optionsLeast > optionsMost
+        ? CANNOT_OPTIONS + 'least` > `options.most`'
+
+        // Check that the length is not less than `options.least`, if set.
+        : hasLeast && optionsLeast > length
+            ? 'has length ' + length + ' < `options.' + LEAST + '` ' + optionsLeast
+
+            // Check that the length is not more than `options.most`, if set.
+            : hasMost && optionsMost < length
+                ? 'has length ' + length + ' > `options.' + MOST + '` ' + optionsMost
+                : ''
+    );
+
+    // If any of the validation above has failed, return an explanation.
+    return result
+        ? buildResultPrefix(options.begin, identifier, 'A dictionary ') + result
+
+        // Otherwise, check that every property conforms to `options.types`, if set.
+        : validateEveryProperty(entries, length, options, hasTypes, identifier);
+}
+
+function validateEveryProperty(entries, length, options, hasTypes, identifier) {
+    const { begin, pass, types } = options;
+
+    // If no types are defined, the property can be any type, or even `undefined`.
+    const definesTypes = hasTypes && types.length;
+
+    // Step through each property in the `entries` array.
+    for (let i=0; i<length; i++) {
+        const [key, value] = entries[i];
+        const type = typeof value;
+
+        // If the value's type is not included in `options.types`, return an
+        // explanation of the problem.
+        if (definesTypes && types.indexOf(type) === -1) {
+            const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+            return buildResultPrefix(
+                begin,
+                identifier && identifier + '.' + key,
+                '`' + key + _OF_ + A_DICTIONARY + '` '
+            ) + IS_ + (
+                value === null
+                    ? NULL
+                    : isArray(value)
+                        ? AN_ARRAY
+                        : TYPE_ + quote(type)
+            ) + ',' + _NOT_ + (
+                types.length === 1
+                    ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
+                    : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+            );
+        }
+
+        // The value's type is included in `options.types`, but if `options.pass`
+        // is set to `true` the value may still be invalid.
+        if (options.pass) {
+            const valueIdentifier = identifier
+                ? identifier + '.' + key
+                : key + _OF_ + A_DICTIONARY;
+            let result;
+            switch (type) {
+                case NUMBER:
+                    result = aintaNumber(value, valueIdentifier, options);
+                    if (result) return result;
+                    break;
+                case STRING:
+                    result = aintaString(value, valueIdentifier, options);
+                    if (result) return result;
+                    break;
+            }
+        }
+    }
+    return false;
+}
+
+/**
  * ### Validates that a value is exactly `null`.
  *
  * If the first argument passed to `aintaNull()` ain't a `null`, it returns
@@ -1079,7 +1240,7 @@ function aintaObject(
     // If `options.open` or `.schema` are invalid, return a helpful result. Note
     // that setting these to `undefined` may be useful in some cases, so that
     // `{ schema:undefined }` acts the same way as `{}`, which is why we use
-    // `options.schema !== undefined` instead of `"schema" in options`.
+    // `options.schema !== void 0` instead of `"schema" in options`.
     const optionsOpen = options.open;
     const hasOpen = optionsOpen !== void 0;
     const optionsSchema = options.schema;
@@ -1284,4 +1445,4 @@ const narrowAinta = (options, ainta, results) =>
         return result;
     };
 
-export { aintaArray, aintaBoolean, aintaNull, aintaNumber, aintaObject, aintaString, aintaType, narrowAintas as default };
+export { aintaArray, aintaBoolean, aintaDictionary, aintaNull, aintaNumber, aintaObject, aintaString, aintaType, narrowAintas as default };

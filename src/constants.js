@@ -93,6 +93,9 @@ export const AN_ = 'an ';
 /** @constant {string} AN_ARRAY The literal string "an array" */
 export const AN_ARRAY = AN_ + ARRAY;
 
+/** @constant {string} A_DICTIONARY The literal string "a dictionary" */
+export const A_DICTIONARY = 'a dictionary';
+
 /** @constant {string} AN_OBJECT The literal string "an object" */
 export const AN_OBJECT = AN_ + OBJECT;
 

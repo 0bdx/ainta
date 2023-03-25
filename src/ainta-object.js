@@ -94,7 +94,7 @@ export default function aintaObject(
     // If `options.open` or `.schema` are invalid, return a helpful result. Note
     // that setting these to `undefined` may be useful in some cases, so that
     // `{ schema:undefined }` acts the same way as `{}`, which is why we use
-    // `options.schema !== undefined` instead of `"schema" in options`.
+    // `options.schema !== void 0` instead of `"schema" in options`.
     const optionsOpen = options.open;
     const hasOpen = optionsOpen !== void 0;
     const optionsSchema = options.schema;

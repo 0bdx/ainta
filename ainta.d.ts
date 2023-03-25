@@ -114,7 +114,7 @@ export type Schema = {
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  *
- * aintaArray([1, 2, 3]);
+ * aintaArray([1, 'two', 3], 'a', { types:['number','string'] });
  * // false
  *
  * aintaArray({});
@@ -123,8 +123,8 @@ export type Schema = {
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
  *
- * aintaArray([1, true, 'ok'], 'num_or_str', { types:['number','string'] });
- * // "`num_or_str[1]` is type 'boolean' not 'number:string'"
+ * aintaArray([1, true, 'ok'], 'a', { types:['number','string'] });
+ * // "`a[1]` is type 'boolean', not one of the `options.types` 'number:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -164,6 +164,50 @@ export function aintaArray(value: any, identifier?: string, options?: Options): 
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
 export function aintaBoolean(value: any, identifier?: string, options?: Options): false | string;
+/**
+ * ### Validates that a value is a simple object of key/value pairs.
+ *
+ * A ‘dictionary’ is a JavaScript object with arbitrary key/value pairs. Often,
+ * all the values will be of the same type - eg, Node.js's `process.env` object,
+ * where every value is a string.
+ *
+ * If the first argument passed to `aintaDictionary()` ain't a dictionary, it
+ * returns a short explanation of what went wrong.
+ *
+ * Else, if the dictionary fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.least` - if set, there must be at least this number of properties
+ * - `options.most` - if set, there must not be more than this number of properties
+ * - `options.pass` - if set, each property is validated more deeply using `options`
+ * - `options.types` - if set, all values must be one of these types
+ *
+ * Otherwise, `aintaDictionary()` returns `false`.
+ *
+ * @example
+ * import { aintaDictionary } from '@0bdx/ainta';
+ *
+ * aintaDictionary({ zero:0, one:1 }, 'all_num', { types:['number'] });
+ * // false
+ *
+ * aintaDictionary([]);
+ * // "A value is an array, not type 'object'"
+ *
+ * aintaDictionary(null, 'lookupTable', { begin:'processLUT()' });
+ * // "processLUT(): `lookupTable` is null not a dictionary"
+ *
+ * aintaDictionary({ zero:0, one:'1' }, 'all_num', { types:['number'] });
+ * // "`all_num[1]` is type 'string', not the `options.types` 'number'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+export function aintaDictionary(value: any, identifier?: string, options?: Options): false | string;
 /**
  * ### Validates that a value is exactly `null`.
  *

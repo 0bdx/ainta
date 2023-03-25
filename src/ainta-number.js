@@ -64,7 +64,7 @@ export default function aintaNumber(
     // If `options.gte`, `.lte` or `.mod` are invalid, return a helpful result.
     // Note that setting these to `undefined` may be useful in some cases, so
     // that `{ gte:undefined }` acts the same way as `{}`, which is why we use
-    // `options.gte !== undefined` instead of `"gte" in options`.
+    // `options.gte !== void 0` instead of `"gte" in options`.
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
     const optionsLte = options.lte;

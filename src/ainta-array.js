@@ -49,7 +49,7 @@ import emptyOptions from './options.js';
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  * 
- * aintaArray([1, 2, 3]);
+ * aintaArray([1, 'two', 3], 'a', { types:['number','string'] });
  * // false
  *
  * aintaArray({});
@@ -58,8 +58,8 @@ import emptyOptions from './options.js';
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
  *
- * aintaArray([1, true, 'ok'], 'num_or_str', { types:['number','string'] });
- * // "`num_or_str[1]` is type 'boolean' not 'number:string'"
+ * aintaArray([1, true, 'ok'], 'a', { types:['number','string'] });
+ * // "`a[1]` is type 'boolean', not one of the `options.types` 'number:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -89,7 +89,7 @@ export default function aintaArray(
     // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
     // helpful result. Note that setting these to `undefined` may be useful in
     // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
-    // is why we use `options.most !== undefined` instead of `"most" in options`.
+    // is why we use `options.most !== void 0` instead of `"most" in options`.
     const optionsLeast = options.least;
     const hasLeast = optionsLeast !== void 0;
     const optionsMost = options.most;
