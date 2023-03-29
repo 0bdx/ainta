@@ -1137,6 +1137,42 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
 }
 
 /**
+ * ### Validates a function.
+ *
+ * If the first argument passed to `aintaFunction()` ain't a function, it returns
+ * a short explanation of what went wrong. Otherwise it returns `false`.
+ *
+ * @example
+ * import { aintaFunction } from '@0bdx/ainta';
+ * 
+ * aintaFunction(function increment(n){ return n+1 });
+ * // false
+ *
+ * aintaFunction(1234);
+ * // "A value is type 'number' not 'function'"
+ *
+ * aintaFunction(null, 'callback', { begin:'runCallback()' });
+ * // "runCallback(): `callback` is null not type 'function'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaFunction(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Use aintaType() to check whether `value` is a function.
+    return aintaType(value, identifier, { ...options, type:FUNCTION });
+}
+
+/**
  * ### Validates that a value is exactly `null`.
  *
  * If the first argument passed to `aintaNull()` ain't a `null`, it returns
@@ -1445,4 +1481,4 @@ const narrowAinta = (options, ainta, results) =>
         return result;
     };
 
-export { aintaArray, aintaBoolean, aintaDictionary, aintaNull, aintaNumber, aintaObject, aintaString, aintaType, narrowAintas as default };
+export { aintaArray, aintaBoolean, aintaDictionary, aintaFunction, aintaNull, aintaNumber, aintaObject, aintaString, aintaType, narrowAintas as default };

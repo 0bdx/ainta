@@ -2,6 +2,7 @@ import narrowAintas, {
     aintaArray,
     aintaBoolean,
     aintaDictionary,
+    aintaFunction,
     aintaNull,
     aintaNumber,
     aintaObject,
@@ -13,6 +14,7 @@ import narrowAintasMin, {
     aintaArray as aintaArrayMin,
     aintaBoolean as aintaBooleanMin,
     aintaDictionary as aintaDictionaryMin,
+    aintaFunction as aintaFunctionMin,
     aintaNull as aintaNullMin,
     aintaNumber as aintaNumberMin,
     aintaObject as aintaObjectMin,
@@ -24,6 +26,7 @@ import { narrowAintasTest } from './src/narrow-aintas.js';
 import { aintaArrayTest } from './src/ainta-array.js';
 import { aintaBooleanTest } from './src/ainta-boolean.js';
 import { aintaDictionaryTest } from './src/ainta-dictionary.js';
+import { aintaFunctionTest } from './src/ainta-function.js';
 import { aintaNullTest } from './src/ainta-null.js';
 import { aintaNumberTest } from './src/ainta-number.js';
 import { aintaObjectTest } from './src/ainta-object.js';
@@ -34,6 +37,7 @@ narrowAintasTest(narrowAintas);
 aintaArrayTest(aintaArray);
 aintaBooleanTest(aintaBoolean);
 aintaDictionaryTest(aintaDictionary);
+aintaFunctionTest(aintaFunction);
 aintaNullTest(aintaNull);
 aintaNumberTest(aintaNumber);
 aintaObjectTest(aintaObject);
@@ -44,6 +48,7 @@ narrowAintasTest(narrowAintasMin);
 aintaArrayTest(aintaArrayMin);
 aintaBooleanTest(aintaBooleanMin);
 aintaDictionaryTest(aintaDictionaryMin);
+aintaFunctionTest(aintaFunctionMin);
 aintaNullTest(aintaNullMin);
 aintaNumberTest(aintaNumberMin);
 aintaObjectTest(aintaObjectMin);

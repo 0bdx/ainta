@@ -2,6 +2,7 @@ import narrowAintas, {
     aintaArray,
     aintaBoolean,
     aintaDictionary,
+    aintaFunction,
     aintaNull,
     aintaNumber,
     aintaObject,
@@ -13,6 +14,7 @@ import { narrowAintasTest } from './narrow-aintas.js';
 import { aintaArrayTest } from './ainta-array.js';
 import { aintaBooleanTest } from './ainta-boolean.js';
 import { aintaDictionaryTest } from './ainta-dictionary.js';
+import { aintaFunctionTest } from './ainta-function.js';
 import { aintaNullTest } from './ainta-null.js';
 import { aintaNumberTest } from './ainta-number.js';
 import { aintaObjectTest } from './ainta-object.js';
@@ -23,6 +25,7 @@ narrowAintasTest(narrowAintas);
 aintaArrayTest(aintaArray);
 aintaBooleanTest(aintaBoolean);
 aintaDictionaryTest(aintaDictionary);
+aintaFunctionTest(aintaFunction);
 aintaNullTest(aintaNull);
 aintaNumberTest(aintaNumber);
 aintaObjectTest(aintaObject);
