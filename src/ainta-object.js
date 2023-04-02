@@ -15,10 +15,8 @@ import {
     IS_NULL,
     IS_TYPE_,
     NULL,
-    NUMBER,
     OBJECT,
     OPEN,
-    STRING,
     TYPE_,
     TYPES,
     UNDEFINED,
@@ -44,8 +42,6 @@ import emptyOptions from './options.js';
  * explanation of what went wrong.
  * 
  * Otherwise, `aintaObject()` returns `false`.
- * 
- * @TODO `aintaDictionary()`, which has `options.keys` and `options.values`.
  * 
  * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
  * doesn't consider `null` or an array to be an object.

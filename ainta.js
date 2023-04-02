@@ -792,6 +792,174 @@ function aintaString(
 }
 
 /**
+ * ### Validates that a value is a regular JavaScript object.
+ *
+ * If the first argument passed to `aintaObject()` ain't an object, it returns
+ * a short explanation of what went wrong.
+ *
+ * Else, if the object does not conform to `options.schema`, it also returns an
+ * explanation of what went wrong.
+ * 
+ * Otherwise, `aintaObject()` returns `false`.
+ * 
+ * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
+ * doesn't consider `null` or an array to be an object.
+ * 
+ * @example
+ * import { aintaObject } from '@0bdx/ainta';
+ * 
+ * aintaObject({ red:0xFF0000 }, 'palette', { open:true });
+ * // false
+ *
+ * aintaObject([]);
+ * // "A value is an array not type 'object'"
+ *
+ * aintaObject(null, 'lookup', { begin:'processLookup()' });
+ * // "processLookup(): `lookup` is null not an object"
+ *
+ * const schema = { red: { rx:/^#[a-f0-9]{6}$/i, types:['string'] } };
+ * aintaObject({ red:0xFF0000 }, 'palette', { schema });
+ * // "`palette.red` is type 'number' not 'string'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaObject(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Check that `value` is a regular JavaScript object. If not, bail out.
+    let result = value === null
+        ? IS_NULL + _NOT_A_REGULAR_ + OBJECT
+        : isArray(value)
+            ? IS_AN_ARRAY + _NOT_A_REGULAR_ + OBJECT
+            : typeof value !== OBJECT
+                ? IS_TYPE_ + quote(typeof value) + _NOT_ + QO
+                : ''
+    ;
+    if (result) return buildResultPrefix(options.begin, identifier) + result;
+
+    // If `options.open` or `.schema` are invalid, return a helpful result. Note
+    // that setting these to `undefined` may be useful in some cases, so that
+    // `{ schema:undefined }` acts the same way as `{}`, which is why we use
+    // `options.schema !== void 0` instead of `"schema" in options`.
+    const optionsOpen = options.open;
+    const hasOpen = optionsOpen !== void 0;
+    const optionsSchema = options.schema;
+    const hasSchema = optionsSchema !== void 0;
+    result = validateBooleanOption(OPEN, optionsOpen, hasOpen)
+     || validateSchemaOption(optionsSchema, hasSchema);
+
+    // If the validation above has failed, return an explanation.
+    return result
+        ? buildResultPrefix(options.begin, identifier, 'An object ') + result
+
+        // Otherwise, check that the object conforms to `options.schema` if set.
+        : validateAgainstSchema(value, options, hasSchema, identifier);
+}
+
+/**
+ * Checks that an object `obj` confirms to a given schema.
+ *
+ * @param {object} obj
+ *    The object to validate.
+ * @param {Options} options
+ *    The standard `ainta` configuration object (optional, defaults to `{}`)..
+ * @param {boolean} hasSchema
+ *    `true` if `options.schema` is present.
+ * @param {string} identifier
+ *    Optional name to call `obj` in the explanation, if invalid.
+ * @return {false|string}
+ *    Returns `false` if `obj` conforms, or an explanation if not.
+ */
+function validateAgainstSchema(obj, options, hasSchema, identifier) {
+    const { begin, open, schema } = options;
+
+    // Step through each property in the `schema` object.
+    let result;
+    if (hasSchema) {
+        for (const key in schema) {
+            const { types } = schema[key];
+            const val = obj[key]; // could be undefined
+            const type = typeof val;
+
+            // If no types are defined, the property can be any type but must exist.
+            if (!types || !types.length) {
+                if (type === UNDEFINED) {
+                    result = [key, IS_ + 'missing'];
+                    break;
+                }
+
+            // Otherwise, if the val's type is not included in `schema.types`,
+            // return an explanation of the problem.
+            } else if (types.indexOf(type) === -1) {
+                const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+                result = [key, IS_ + (
+                    val === null
+                        ? NULL
+                        : isArray(val)
+                            ? AN_ARRAY
+                            : TYPE_ + quote(type)
+                    ) + ',' + _NOT_ + (
+                        types.length === 1
+                            ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
+                            : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                    )
+                ];
+                break;
+
+            // The val's type is included in `schema.types`, but the item may
+            // still be invalid.
+            } else {
+                const valIdentifier = identifier
+                    ? identifier + '.' + key
+                    : key + _OF_ + AN_OBJECT;
+                const ainta = {
+                    number: aintaNumber,
+                    string: aintaString,
+                }[type];
+                if (ainta) {
+                    const result = ainta(
+                        val,
+                        valIdentifier,
+                        { begin:options.begin, ...schema[key] },
+                    );
+                    if (result) return result;
+                }
+            }
+
+            // @TODO nested schemas
+        }
+    }
+
+    // If `options.open` is `false` and the object contains a property which has
+    // no schema key, return an explanation of the problem.
+    if (!open) {
+        for (const key in obj) {
+            if (!schema || !schema[key]) {
+                result = [key, 'is unexpected'];
+                break;
+            }
+        }
+    }
+
+    return result ? buildResultPrefix(
+            begin,
+            identifier && identifier + '.' + result[0],
+            '`' + result[0] + _OF_ + AN_OBJECT + '` '
+        ) + result[1]
+        : false
+    ;
+}
+
+/**
  * ### Validates a value using JavaScript's native `Array.isArray()`.
  *
  * If the first argument passed to `aintaArray()` ain't an array, it returns
@@ -805,6 +973,8 @@ function aintaString(
  * - `options.types` - if set, all items must be one of these types
  * 
  * Otherwise, `aintaArray()` returns `false`.
+ * 
+ * @TODO invalid if an item is null or an array, in an array of objects
  * 
  * @example
  * import { aintaArray } from '@0bdx/ainta';
@@ -930,6 +1100,12 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
             switch (type) {
                 case NUMBER:
                     result = aintaNumber(item, itemIdentifier, options);
+                    if (result) return result;
+                    break;
+                case OBJECT:
+                    if (item === null) break; // @TODO a bit hacky, revisit this
+                    if (Array.isArray(item)) break; // @TODO a bit hacky, revisit this
+                    result = aintaObject(item, itemIdentifier, options);
                     if (result) return result;
                     break;
                 case STRING:
@@ -1213,176 +1389,6 @@ function aintaNull(
             ? IS_AN_ARRAY
             : IS_TYPE_ + quote(typeof value)
         ) + _NOT_ + NULL
-    ;
-}
-
-/**
- * ### Validates that a value is a regular JavaScript object.
- *
- * If the first argument passed to `aintaObject()` ain't an object, it returns
- * a short explanation of what went wrong.
- *
- * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong.
- * 
- * Otherwise, `aintaObject()` returns `false`.
- * 
- * @TODO `aintaDictionary()`, which has `options.keys` and `options.values`.
- * 
- * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
- * doesn't consider `null` or an array to be an object.
- * 
- * @example
- * import { aintaObject } from '@0bdx/ainta';
- * 
- * aintaObject({ red:0xFF0000 }, 'palette', { open:true });
- * // false
- *
- * aintaObject([]);
- * // "A value is an array not type 'object'"
- *
- * aintaObject(null, 'lookup', { begin:'processLookup()' });
- * // "processLookup(): `lookup` is null not an object"
- *
- * const schema = { red: { rx:/^#[a-f0-9]{6}$/i, types:['string'] } };
- * aintaObject({ red:0xFF0000 }, 'palette', { schema });
- * // "`palette.red` is type 'number' not 'string'"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- */
-function aintaObject(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Check that `value` is a regular JavaScript object. If not, bail out.
-    let result = value === null
-        ? IS_NULL + _NOT_A_REGULAR_ + OBJECT
-        : isArray(value)
-            ? IS_AN_ARRAY + _NOT_A_REGULAR_ + OBJECT
-            : typeof value !== OBJECT
-                ? IS_TYPE_ + quote(typeof value) + _NOT_ + QO
-                : ''
-    ;
-    if (result) return buildResultPrefix(options.begin, identifier) + result;
-
-    // If `options.open` or `.schema` are invalid, return a helpful result. Note
-    // that setting these to `undefined` may be useful in some cases, so that
-    // `{ schema:undefined }` acts the same way as `{}`, which is why we use
-    // `options.schema !== void 0` instead of `"schema" in options`.
-    const optionsOpen = options.open;
-    const hasOpen = optionsOpen !== void 0;
-    const optionsSchema = options.schema;
-    const hasSchema = optionsSchema !== void 0;
-    result = validateBooleanOption(OPEN, optionsOpen, hasOpen)
-     || validateSchemaOption(optionsSchema, hasSchema);
-
-    // If the validation above has failed, return an explanation.
-    return result
-        ? buildResultPrefix(options.begin, identifier, 'An object ') + result
-
-        // Otherwise, check that the object conforms to `options.schema` if set.
-        : validateAgainstSchema(value, options, hasSchema, identifier);
-}
-
-/**
- * Checks that an object `obj` confirms to a given schema.
- *
- * @param {object} obj
- *    The object to validate.
- * @param {Options} options
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
- * @param {boolean} hasSchema
- *    `true` if `options.schema` is present.
- * @param {string} identifier
- *    Optional name to call `obj` in the explanation, if invalid.
- * @return {false|string}
- *    Returns `false` if `obj` conforms, or an explanation if not.
- */
-function validateAgainstSchema(obj, options, hasSchema, identifier) {
-    const { begin, open, schema } = options;
-
-    // Step through each property in the `schema` object.
-    let result;
-    if (hasSchema) {
-        for (const key in schema) {
-            const { types } = schema[key];
-            const val = obj[key]; // could be undefined
-            const type = typeof val;
-
-            // If no types are defined, the property can be any type but must exist.
-            if (!types || !types.length) {
-                if (type === UNDEFINED) {
-                    result = [key, IS_ + 'missing'];
-                    break;
-                }
-
-            // Otherwise, if the val's type is not included in `schema.types`,
-            // return an explanation of the problem.
-            } else if (types.indexOf(type) === -1) {
-                const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
-                result = [key, IS_ + (
-                    val === null
-                        ? NULL
-                        : isArray(val)
-                            ? AN_ARRAY
-                            : TYPE_ + quote(type)
-                    ) + ',' + _NOT_ + (
-                        types.length === 1
-                            ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                            : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
-                    )
-                ];
-                break;
-
-            // The val's type is included in `schema.types`, but the item may
-            // still be invalid.
-            } else {
-                const valIdentifier = identifier
-                    ? identifier + '.' + key
-                    : key + _OF_ + AN_OBJECT;
-                const ainta = {
-                    number: aintaNumber,
-                    string: aintaString,
-                }[type];
-                if (ainta) {
-                    const result = ainta(
-                        val,
-                        valIdentifier,
-                        { begin:options.begin, ...schema[key] },
-                    );
-                    if (result) return result;
-                }
-            }
-
-            // @TODO nested schemas
-        }
-    }
-
-    // If `options.open` is `false` and the object contains a property which has
-    // no schema key, return an explanation of the problem.
-    if (!open) {
-        for (const key in obj) {
-            if (!schema || !schema[key]) {
-                result = [key, 'is unexpected'];
-                break;
-            }
-        }
-    }
-
-    return result ? buildResultPrefix(
-            begin,
-            identifier && identifier + '.' + result[0],
-            '`' + result[0] + _OF_ + AN_OBJECT + '` '
-        ) + result[1]
-        : false
     ;
 }
 

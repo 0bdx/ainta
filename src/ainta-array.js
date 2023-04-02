@@ -1,4 +1,5 @@
 import aintaNumber from './ainta-number.js';
+import aintaObject from './ainta-object.js';
 import aintaString from './ainta-string.js';
 import {
     _BT_OPTIONS_DOT,
@@ -15,6 +16,7 @@ import {
     MOST,
     NULL,
     NUMBER,
+    OBJECT,
     PASS,
     TYPE_,
     TYPES,
@@ -45,6 +47,8 @@ import emptyOptions from './options.js';
  * - `options.types` - if set, all items must be one of these types
  * 
  * Otherwise, `aintaArray()` returns `false`.
+ * 
+ * @TODO invalid if an item is null or an array, in an array of objects
  * 
  * @example
  * import { aintaArray } from '@0bdx/ainta';
@@ -170,6 +174,12 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
             switch (type) {
                 case NUMBER:
                     result = aintaNumber(item, itemIdentifier, options);
+                    if (result) return result;
+                    break;
+                case OBJECT:
+                    if (item === null) break; // @TODO a bit hacky, revisit this
+                    if (Array.isArray(item)) break; // @TODO a bit hacky, revisit this
+                    result = aintaObject(item, itemIdentifier, options);
                     if (result) return result;
                     break;
                 case STRING:
@@ -336,7 +346,7 @@ export function aintaArrayTest(f) {
     equal(f([0,-10,100,11], 'multiples_of_10', { begin:'Numbers', mod:10, pass:false }),
         false);
 
-    // Basic `options.schema` usage - properties can be any type.
+    // Basic `options.types` usage - properties can be any type.
     const everyType = [{},null,[],Math,/a/,()=>0,1,NaN,'a',false,void 0,BigInt(1),Symbol('a')];
     equal(f(everyType, 'everyType', { begin:'Anything goes', types:[] }),
         false);
@@ -389,6 +399,17 @@ export function aintaArrayTest(f) {
         false);
     equal(f([-1,'',0,77], '', { begin:'negative or non-empty str',
         lte:0, min:1, pass:false, types:['number','string'] }), // pass is false
+        false);
+
+    // Using `options.pass` to validate an array of objects with a schema.
+    equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'obj.a is a number',
+        pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
+        "obj.a is a number: `[2] of an array.a` is type 'string', not the `options.types` 'number'");
+    equal(f([{a:0},[],{a:1},{a:2},null,{a:3}], '', { begin:'the array and null are allowed',
+        pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
+        false);
+    equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'pass is false',
+        pass:false, schema:{ a:{ types:['number']} }, types:['object'] }),
         false);
 
     // Extra `options` values cause TS errors, but do not prevent normal use.

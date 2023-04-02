@@ -111,6 +111,8 @@ export type Schema = {
  *
  * Otherwise, `aintaArray()` returns `false`.
  *
+ * @TODO invalid if an item is null or an array, in an array of objects
+ *
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  *
@@ -314,8 +316,6 @@ export function aintaNumber(value: any, identifier?: string, options?: Options):
  * explanation of what went wrong.
  *
  * Otherwise, `aintaObject()` returns `false`.
- *
- * @TODO `aintaDictionary()`, which has `options.keys` and `options.values`.
  *
  * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
  * doesn't consider `null` or an array to be an object.
