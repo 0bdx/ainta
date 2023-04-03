@@ -166,7 +166,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
 
         // The item's type is included in `options.types`, but if `options.pass`
         // is set to `true` the item may still be invalid.
-        if (options.pass) {
+        if (pass) {
             const itemIdentifier = identifier
                 ? identifier + '[' + i + ']'
                 : SQI + _OF_ + AN_ARRAY
@@ -402,6 +402,7 @@ export function aintaArrayTest(f) {
         false);
 
     // Using `options.pass` to validate an array of objects with a schema.
+    // @TODO output better wording than `[2] of an array.a`
     equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'obj.a is a number',
         pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
         "obj.a is a number: `[2] of an array.a` is type 'string', not the `options.types` 'number'");

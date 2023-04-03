@@ -1,4 +1,5 @@
 import aintaNumber from './ainta-number.js';
+import aintaObject from './ainta-object.js';
 import aintaString from './ainta-string.js';
 import {
     _BT_OPTIONS_DOT,
@@ -174,7 +175,7 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
 
         // The value's type is included in `options.types`, but if `options.pass`
         // is set to `true` the value may still be invalid.
-        if (options.pass) {
+        if (pass) {
             const valueIdentifier = identifier
                 ? identifier + '.' + key
                 : key + _OF_ + A_DICTIONARY
@@ -182,6 +183,12 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
             switch (type) {
                 case NUMBER:
                     result = aintaNumber(value, valueIdentifier, options);
+                    if (result) return result;
+                    break;
+                case OBJECT:
+                    if (value === null) break; // @TODO a bit hacky, revisit this
+                    if (Array.isArray(value)) break; // @TODO a bit hacky, revisit this
+                    result = aintaObject(value, valueIdentifier, options);
                     if (result) return result;
                     break;
                 case STRING:
@@ -346,6 +353,18 @@ export function aintaDictionaryTest(f) {
     equal(f({a:0,b:-10,c:100,d:11}, 'multiples_of_10', { begin:'Numbers', mod:10, pass:true }),
         "Numbers: `multiples_of_10.d` 11 is not divisible by 10");
     equal(f({a:0,b:-10,c:100,d:11}, 'multiples_of_10', { begin:'Numbers', mod:10, pass:false }),
+        false);
+
+    // Using `options.pass` to validate a dictionary of objects with a schema.
+    // @TODO output better wording than `C of a dictionary.a`
+    equal(f({A:{a:0},B:{a:1},C:{a:'2'},D:{a:3}}, '', { begin:'obj.a is a number',
+        pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
+        "obj.a is a number: `C of a dictionary.a` is type 'string', not the `options.types` 'number'");
+    equal(f({A:{a:0},B:[],C:{a:1},D:{a:2},E:null,F:{a:3}}, '', { begin:'the array and null are allowed',
+        pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
+        false);
+    equal(f({A:{a:0},B:{a:1},C:{a:'2'},D:{a:3}}, '', { begin:'pass is false',
+        pass:false, schema:{ a:{ types:['number']} }, types:['object'] }),
         false);
 
     // Basic `options.schema` usage - properties can be any type.

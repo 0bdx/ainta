@@ -1092,7 +1092,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
 
         // The item's type is included in `options.types`, but if `options.pass`
         // is set to `true` the item may still be invalid.
-        if (options.pass) {
+        if (pass) {
             const itemIdentifier = identifier
                 ? identifier + '[' + i + ']'
                 : SQI + _OF_ + AN_ARRAY;
@@ -1292,7 +1292,7 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
 
         // The value's type is included in `options.types`, but if `options.pass`
         // is set to `true` the value may still be invalid.
-        if (options.pass) {
+        if (pass) {
             const valueIdentifier = identifier
                 ? identifier + '.' + key
                 : key + _OF_ + A_DICTIONARY;
@@ -1300,6 +1300,12 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
             switch (type) {
                 case NUMBER:
                     result = aintaNumber(value, valueIdentifier, options);
+                    if (result) return result;
+                    break;
+                case OBJECT:
+                    if (value === null) break; // @TODO a bit hacky, revisit this
+                    if (Array.isArray(value)) break; // @TODO a bit hacky, revisit this
+                    result = aintaObject(value, valueIdentifier, options);
                     if (result) return result;
                     break;
                 case STRING:
