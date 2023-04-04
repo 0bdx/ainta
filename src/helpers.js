@@ -228,12 +228,14 @@ export const validateNumericOption = (key, val, has, notZero, notNegative) => {
  * ### Validates an option which should be an object with a `test()` function.
  * @private
  *
+ * @param {string} key
+ *    The name of the option to validate, eg "rx".
  * @param {any} val
  *    The value of the option, which must be an object to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  */
-export const validateRxishOption = (val, has) => {
+export const validateRxishOption = (key, val, has) => {
     if (has) {
         let result = val === null
             ? IS_NULL + _NOT_TYPE_ + QO
@@ -242,7 +244,7 @@ export const validateRxishOption = (val, has) => {
                 : typeof val !== OBJECT
                     ? IS_TYPE_ + quote(typeof val) + _NOT_ + QO
                     : '';
-        if (result) return CANNOT_OPTIONS + 'rx` ' + result;
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
         const fn = val.test;
         result = fn === null
             ? IS_NULL + _NOT_TYPE_ + QF
@@ -251,7 +253,7 @@ export const validateRxishOption = (val, has) => {
                 : typeof fn !== FUNCTION
                     ? IS_TYPE_ + quote(typeof fn) + _NOT_ + QF
                     : '';
-        if (result) return CANNOT_OPTIONS + 'rx.test` ' + result;
+        if (result) return CANNOT_OPTIONS + key + '.test` ' + result;
     }    
 };
 

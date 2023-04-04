@@ -45,6 +45,9 @@ export const ENUM = 'enum';
 /** @constant {string} GTE The literal string "gte" */
 export const GTE = 'gte';
 
+/** @constant {string} KEY The literal string "key" */
+export const KEY = 'key';
+
 // /** @constant {string} KIND The literal string "kind" */
 // export const KIND = 'kind';
 // 

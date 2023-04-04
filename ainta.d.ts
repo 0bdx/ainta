@@ -30,6 +30,10 @@ export type Options = {
      */
     gte?: number;
     /**
+     * Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+     */
+    key?: Rxish;
+    /**
      * Optional minimum length of an array.
      */
     least?: number;
@@ -178,6 +182,7 @@ export function aintaBoolean(value: any, identifier?: string, options?: Options)
  *
  * Else, if the dictionary fails any of the following conditions, it also
  * returns an explanation of what went wrong:
+ * - `options.key` - if set, all keys must pass this `RexExp`-like object
  * - `options.least` - if set, there must be at least this number of properties
  * - `options.most` - if set, there must not be more than this number of properties
  * - `options.pass` - if set, each property is validated more deeply using `options`

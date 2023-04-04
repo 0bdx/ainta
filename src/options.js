@@ -27,6 +27,8 @@
  *    Optional array of strings.
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {Rxish} [key]
+ *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
  * @property {number} [least]
  *    Optional minimum length of an array.
  * @property {number} [lte]

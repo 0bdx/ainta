@@ -11,10 +11,12 @@ import {
     A_DICTIONARY,
     AN_ARRAY,
     CANNOT_OPTIONS,
+    FUNCTION,
     IS_,
     IS_AN_ARRAY,
     IS_NULL,
     IS_TYPE_,
+    KEY,
     LEAST,
     MOST,
     NULL,
@@ -34,6 +36,7 @@ import {
     validateArrayOfStringsOption,
     validateBooleanOption,
     validateNumericOption,
+    validateRxishOption,
 } from './helpers.js';
 import emptyOptions from './options.js';
 
@@ -49,6 +52,7 @@ import emptyOptions from './options.js';
  *
  * Else, if the dictionary fails any of the following conditions, it also
  * returns an explanation of what went wrong:
+ * - `options.key` - if set, all keys must pass this `RexExp`-like object
  * - `options.least` - if set, there must be at least this number of properties
  * - `options.most` - if set, there must not be more than this number of properties
  * - `options.pass` - if set, each property is validated more deeply using `options`
@@ -100,10 +104,12 @@ export default function aintaDictionary(
     const entries = Object.entries(value);
     const length = entries.length;
 
-    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
-    // helpful result. Note that setting these to `undefined` may be useful in
+    // If `options.key`, `.least`, `.most`, `.pass` or `.types` are invalid,
+    // return a helpful result. Setting these to `undefined` may be useful in
     // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
-    // is why we use `options.most !== void 0` instead of `"most" in options`.
+    // is why we use `options.key !== void 0` instead of `"key" in options`.
+    const optionsKey = options.key;
+    const hasKey = optionsKey !== void 0;
     const optionsLeast = options.least;
     const hasLeast = optionsLeast !== void 0;
     const optionsMost = options.most;
@@ -113,7 +119,8 @@ export default function aintaDictionary(
     const optionsTypes = options.types;
     const hasTypes = optionsTypes !== void 0;
     result =
-        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+        validateRxishOption(KEY, optionsKey, hasKey)
+     || validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
      || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
@@ -138,11 +145,11 @@ export default function aintaDictionary(
         ? buildResultPrefix(options.begin, identifier, 'A dictionary ') + result
 
         // Otherwise, check that every property conforms to `options.types`, if set.
-        : validateEveryProperty(entries, length, options, hasTypes, identifier);
+        : validateEveryProperty(entries, length, options, hasKey, hasTypes, identifier);
 }
 
-function validateEveryProperty(entries, length, options, hasTypes, identifier) {
-    const { begin, pass, types } = options;
+function validateEveryProperty(entries, length, options, hasKey, hasTypes, identifier) {
+    const { begin, key:optionsKey, pass, types } = options;
 
     // If no types are defined, the property can be any type, or even `undefined`.
     const definesTypes = hasTypes && types.length;
@@ -151,6 +158,21 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
     for (let i=0; i<length; i++) {
         const [key, value] = entries[i];
         const type = typeof value;
+
+        // If the key fails the RegExp `option.key`, return an explanation of the
+        // problem. Note that `option.key` can also be an object with a `test()`.
+        if (hasKey && !optionsKey.test(key)) {
+            const safeKey = saq(key);
+            return buildResultPrefix(
+                begin,
+                identifier && identifier + '.' + safeKey,
+                '`' + safeKey + _OF_ + A_DICTIONARY + '` '
+            ) + 'fails ' + (
+                optionsKey instanceof RegExp
+                    ? optionsKey
+                    : 'custom test ' + FUNCTION
+            );
+        }
 
         // If the value's type is not included in `options.types`, return an
         // explanation of the problem.
@@ -214,6 +236,27 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
 export function aintaDictionaryTest(f) {
     const equal = (actual, expected) => { if (actual !== expected) throw Error(
         `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+
+    // Invalid `options.key` produces a helpful result.
+    equal(f({a:1}, 'one', { begin:'Least', key:null }),
+        "Least: `one` cannot be validated, `options.key` is null not type 'object'");
+    // @ts-expect-error
+    equal(f({a:2}, undefined, { key:[], least:false }), // the `least` error is ignored
+        "A dictionary cannot be validated, `options.key` is an array not type 'object'");
+    // @ts-expect-error
+    equal(f({a:3}, null, { begin:'Three', key:NaN }),
+        "Three: A dictionary cannot be validated, `options.key` is type 'number' not 'object'");
+    // @ts-expect-error
+    equal(f({a:4}, 'nope', { key:{} }),
+        "`nope` cannot be validated, `options.key.test` is type 'undefined' not 'function'");
+    equal(f({a:5}, 'five', { key:{ test:null } }),
+        "`five` cannot be validated, `options.key.test` is null not type 'function'");
+    // @ts-expect-error
+    equal(f({a:6}, '6', { begin:'six()', key:{ test:[] } }),
+        "six(): `6` cannot be validated, `options.key.test` is an array not type 'function'");
+    // @ts-expect-error
+    equal(f({a:7}, '', { key:{ test:BigInt(7) } }),
+        "A dictionary cannot be validated, `options.key.test` is type 'bigint' not 'function'");
 
     // Invalid `options.least` produces a helpful result.
     equal(f({a:1}, 'one', { begin:'Least', least:null }),
@@ -314,6 +357,16 @@ export function aintaDictionaryTest(f) {
         "`date` is type 'bigint' not 'object'");
     equal(f(123, void 0, { type:'number' }),
         "A value is type 'number' not 'object'");
+
+    // Typical `options.key` usage.
+    equal(f({a:1,b:2,C:3}, null, { key:/^[a-z]$/ }),
+        "`'C' of a dictionary` fails /^[a-z]$/");
+    equal(f({a:1,bb:2,c:3}, 'dict', { key:/^[a-z]$/ }),
+        "`dict.'bb'` fails /^[a-z]$/");
+    equal(f({a:1,b:2,c:3}, 'ok_dict', { key:/^[a-z]$/ }),
+        false);
+    equal(f({}, 'empty_dict', { key:/^[a-z]$/ }),
+        false);
 
     // Typical `options.least` usage.
     equal(f({a:1,b:2}, null, { least:3 }),

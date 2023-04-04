@@ -48,6 +48,9 @@ const ENUM = 'enum';
 /** @constant {string} GTE The literal string "gte" */
 const GTE = 'gte';
 
+/** @constant {string} KEY The literal string "key" */
+const KEY = 'key';
+
 // /** @constant {string} KIND The literal string "kind" */
 // export const KIND = 'kind';
 // 
@@ -77,6 +80,9 @@ const OPEN = 'open';
 
 /** @constant {string} PASS The literal string "pass" */
 const PASS = 'pass';
+
+/** @constant {string} RX The literal string "rx" */
+const RX = 'rx';
 
 /** @constant {string} TYPE The literal string "type" */
 const TYPE = 'type';
@@ -347,12 +353,14 @@ const validateNumericOption = (key, val, has, notZero, notNegative) => {
  * ### Validates an option which should be an object with a `test()` function.
  * @private
  *
+ * @param {string} key
+ *    The name of the option to validate, eg "rx".
  * @param {any} val
  *    The value of the option, which must be an object to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  */
-const validateRxishOption = (val, has) => {
+const validateRxishOption = (key, val, has) => {
     if (has) {
         let result = val === null
             ? IS_NULL + _NOT_TYPE_ + QO
@@ -361,7 +369,7 @@ const validateRxishOption = (val, has) => {
                 : typeof val !== OBJECT
                     ? IS_TYPE_ + quote(typeof val) + _NOT_ + QO
                     : '';
-        if (result) return CANNOT_OPTIONS + 'rx` ' + result;
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
         const fn = val.test;
         result = fn === null
             ? IS_NULL + _NOT_TYPE_ + QF
@@ -370,7 +378,7 @@ const validateRxishOption = (val, has) => {
                 : typeof fn !== FUNCTION
                     ? IS_TYPE_ + quote(typeof fn) + _NOT_ + QF
                     : '';
-        if (result) return CANNOT_OPTIONS + 'rx.test` ' + result;
+        if (result) return CANNOT_OPTIONS + key + '.test` ' + result;
     }    
 };
 
@@ -469,6 +477,8 @@ const validateSchemaOption = (schema, has) => {
  *    Optional array of strings.
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {Rxish} [key]
+ *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
  * @property {number} [least]
  *    Optional minimum length of an array.
  * @property {number} [lte]
@@ -758,7 +768,7 @@ function aintaString(
         validateArrayOfStringsOption(ENUM, optionsEnum, hasEnum)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
-     || validateRxishOption(optionsRx, hasRx)
+     || validateRxishOption(RX, optionsRx, hasRx)
 
     // If `options.max` and `options.min` are both being used, but `max` is less
     // than `min`, return a helpful result.
@@ -1166,6 +1176,7 @@ function aintaBoolean(
  *
  * Else, if the dictionary fails any of the following conditions, it also
  * returns an explanation of what went wrong:
+ * - `options.key` - if set, all keys must pass this `RexExp`-like object
  * - `options.least` - if set, there must be at least this number of properties
  * - `options.most` - if set, there must not be more than this number of properties
  * - `options.pass` - if set, each property is validated more deeply using `options`
@@ -1217,10 +1228,12 @@ function aintaDictionary(
     const entries = Object.entries(value);
     const length = entries.length;
 
-    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
-    // helpful result. Note that setting these to `undefined` may be useful in
+    // If `options.key`, `.least`, `.most`, `.pass` or `.types` are invalid,
+    // return a helpful result. Setting these to `undefined` may be useful in
     // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
-    // is why we use `options.most !== void 0` instead of `"most" in options`.
+    // is why we use `options.key !== void 0` instead of `"key" in options`.
+    const optionsKey = options.key;
+    const hasKey = optionsKey !== void 0;
     const optionsLeast = options.least;
     const hasLeast = optionsLeast !== void 0;
     const optionsMost = options.most;
@@ -1230,7 +1243,8 @@ function aintaDictionary(
     const optionsTypes = options.types;
     const hasTypes = optionsTypes !== void 0;
     result =
-        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+        validateRxishOption(KEY, optionsKey, hasKey)
+     || validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
      || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
@@ -1255,11 +1269,11 @@ function aintaDictionary(
         ? buildResultPrefix(options.begin, identifier, 'A dictionary ') + result
 
         // Otherwise, check that every property conforms to `options.types`, if set.
-        : validateEveryProperty(entries, length, options, hasTypes, identifier);
+        : validateEveryProperty(entries, length, options, hasKey, hasTypes, identifier);
 }
 
-function validateEveryProperty(entries, length, options, hasTypes, identifier) {
-    const { begin, pass, types } = options;
+function validateEveryProperty(entries, length, options, hasKey, hasTypes, identifier) {
+    const { begin, key:optionsKey, pass, types } = options;
 
     // If no types are defined, the property can be any type, or even `undefined`.
     const definesTypes = hasTypes && types.length;
@@ -1268,6 +1282,21 @@ function validateEveryProperty(entries, length, options, hasTypes, identifier) {
     for (let i=0; i<length; i++) {
         const [key, value] = entries[i];
         const type = typeof value;
+
+        // If the key fails the RegExp `option.key`, return an explanation of the
+        // problem. Note that `option.key` can also be an object with a `test()`.
+        if (hasKey && !optionsKey.test(key)) {
+            const safeKey = saq(key);
+            return buildResultPrefix(
+                begin,
+                identifier && identifier + '.' + safeKey,
+                '`' + safeKey + _OF_ + A_DICTIONARY + '` '
+            ) + 'fails ' + (
+                optionsKey instanceof RegExp
+                    ? optionsKey
+                    : 'custom test ' + FUNCTION
+            );
+        }
 
         // If the value's type is not included in `options.types`, return an
         // explanation of the problem.

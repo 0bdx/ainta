@@ -6,6 +6,7 @@ import {
     FUNCTION,
     MAX,
     MIN,
+    RX,
     STRING,
 } from './constants.js';
 import {
@@ -86,7 +87,7 @@ export default function aintaString(
         validateArrayOfStringsOption(ENUM, optionsEnum, hasEnum)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
-     || validateRxishOption(optionsRx, hasRx)
+     || validateRxishOption(RX, optionsRx, hasRx)
 
     // If `options.max` and `options.min` are both being used, but `max` is less
     // than `min`, return a helpful result.
