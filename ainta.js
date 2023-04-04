@@ -1,6 +1,6 @@
 /**
  * https://www.npmjs.com/package/@0bdx/ainta
- * @version 0.0.11
+ * @version 0.0.12
  * @license Copyright (c) 2023 0bdx <0@0bdx.com> (0bdx.com)
  * SPDX-License-Identifier: MIT
  */

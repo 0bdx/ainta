@@ -32,6 +32,7 @@ import {
     isArray,
     QO,
     quote,
+    sanitise,
     saq,
     validateArrayOfStringsOption,
     validateBooleanOption,
@@ -162,7 +163,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
         // If the key fails the RegExp `option.key`, return an explanation of the
         // problem. Note that `option.key` can also be an object with a `test()`.
         if (hasKey && !optionsKey.test(key)) {
-            const safeKey = saq(key);
+            const safeKey = sanitise(key);
             return buildResultPrefix(
                 begin,
                 identifier && identifier + '.' + safeKey,
@@ -360,9 +361,9 @@ export function aintaDictionaryTest(f) {
 
     // Typical `options.key` usage.
     equal(f({a:1,b:2,C:3}, null, { key:/^[a-z]$/ }),
-        "`'C' of a dictionary` fails /^[a-z]$/");
+        "`C of a dictionary` fails /^[a-z]$/");
     equal(f({a:1,bb:2,c:3}, 'dict', { key:/^[a-z]$/ }),
-        "`dict.'bb'` fails /^[a-z]$/");
+        "`dict.bb` fails /^[a-z]$/");
     equal(f({a:1,b:2,c:3}, 'ok_dict', { key:/^[a-z]$/ }),
         false);
     equal(f({}, 'empty_dict', { key:/^[a-z]$/ }),
