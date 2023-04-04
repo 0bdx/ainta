@@ -1,6 +1,6 @@
 /**
  * https://www.npmjs.com/package/@0bdx/ainta
- * @version 0.0.12
+ * @version 0.0.13
  * @license Copyright (c) 2023 0bdx <0@0bdx.com> (0bdx.com)
  * SPDX-License-Identifier: MIT
  */
@@ -1286,7 +1286,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
         // If the key fails the RegExp `option.key`, return an explanation of the
         // problem. Note that `option.key` can also be an object with a `test()`.
         if (hasKey && !optionsKey.test(key)) {
-            const safeKey = saq(key);
+            const safeKey = sanitise(key);
             return buildResultPrefix(
                 begin,
                 identifier && identifier + '.' + safeKey,
