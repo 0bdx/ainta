@@ -22,8 +22,10 @@ import {
     NULL,
     NUMBER,
     OBJECT,
+    ONE,
     PASS,
     STRING,
+    THE,
     TYPE_,
     TYPES,
 } from './constants.js';
@@ -178,7 +180,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
         // If the value's type is not included in `options.types`, return an
         // explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
-            const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+            const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
                 identifier && identifier + '.' + key,
@@ -192,7 +194,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
             ) + ',' + _NOT_ + (
                 types.length === 1
                     ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                    : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                    : ONE + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
             );
         }
 

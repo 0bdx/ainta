@@ -105,11 +105,17 @@ const AN_OBJECT = AN_ + OBJECT;
 /** @constant {string} IS_ The literal string "is " */
 const IS_ = 'is ';
 
+/** @constant {string} ONE The literal string "one" */
+const ONE = 'one';
+
 /** @constant {string} _NOT_ The literal string " not " */
 const _NOT_ = ' not ';
 
 /** @constant {string} _OF_ The literal string " of " */
 const _OF_ = ' of ';
+
+/** @constant {string} THE The literal string "the" */
+const THE = 'the';
 
 /** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
 const _BT_OPTIONS_DOT = ' `options.';
@@ -910,7 +916,7 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
             // Otherwise, if the val's type is not included in `schema.types`,
             // return an explanation of the problem.
             } else if (types.indexOf(type) === -1) {
-                const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+                const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
                 result = [key, IS_ + (
                     val === null
                         ? NULL
@@ -920,7 +926,7 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
                     ) + ',' + _NOT_ + (
                         types.length === 1
                             ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                            : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                            : ONE + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
                     )
                 ];
                 break;
@@ -984,8 +990,6 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
  * 
  * Otherwise, `aintaArray()` returns `false`.
  * 
- * @TODO invalid if an item is null or an array, in an array of objects
- * 
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  * 
@@ -998,8 +1002,8 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
  *
- * aintaArray([1, true, 'ok'], 'a', { types:['number','string'] });
- * // "`a[1]` is type 'boolean', not one of the `options.types` 'number:string'"
+ * aintaArray(['ok', null, {}], 'a', { types:['object','string'] });
+ * // "`a[1]` is null, not one of the `options.types` 'object:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -1082,7 +1086,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
         // If the item's type is not included in `options.types`, return an
         // explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
-            const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+            const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
                 identifier && identifier + SQI,
@@ -1096,8 +1100,23 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
             ) + ',' + _NOT_ + (
                 types.length === 1
                     ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                    : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                    : ONE + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
             );
+        }
+
+        // If the item is `null` or an array, don't let it match 'object' in
+        // `options.types`.
+        if (definesTypes && type === OBJECT) {
+            const result = item === null
+                ? NULL
+                : isArray(item)
+                    ? AN_ARRAY
+                    : '';
+            if (result) return buildResultPrefix(
+                begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + IS_ + result + ',' + _NOT_A_REGULAR_ + OBJECT;
         }
 
         // The item's type is included in `options.types`, but if `options.pass`
@@ -1301,7 +1320,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
         // If the value's type is not included in `options.types`, return an
         // explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
-            const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+            const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
                 identifier && identifier + '.' + key,
@@ -1315,7 +1334,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
             ) + ',' + _NOT_ + (
                 types.length === 1
                     ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                    : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                    : ONE + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
             );
         }
 

@@ -105,11 +105,17 @@ export const AN_OBJECT = AN_ + OBJECT;
 /** @constant {string} IS_ The literal string "is " */
 export const IS_ = 'is ';
 
+/** @constant {string} ONE The literal string "one" */
+export const ONE = 'one';
+
 /** @constant {string} _NOT_ The literal string " not " */
 export const _NOT_ = ' not ';
 
 /** @constant {string} _OF_ The literal string " of " */
 export const _OF_ = ' of ';
+
+/** @constant {string} THE The literal string "the" */
+export const THE = 'the';
 
 /** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
 export const _BT_OPTIONS_DOT = ' `options.';

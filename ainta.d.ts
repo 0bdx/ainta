@@ -115,8 +115,6 @@ export type Schema = {
  *
  * Otherwise, `aintaArray()` returns `false`.
  *
- * @TODO invalid if an item is null or an array, in an array of objects
- *
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  *
@@ -129,8 +127,8 @@ export type Schema = {
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
  *
- * aintaArray([1, true, 'ok'], 'a', { types:['number','string'] });
- * // "`a[1]` is type 'boolean', not one of the `options.types` 'number:string'"
+ * aintaArray(['ok', null, {}], 'a', { types:['object','string'] });
+ * // "`a[1]` is null, not one of the `options.types` 'object:string'"
  *
  * @param {any} value
  *    The value to validate.

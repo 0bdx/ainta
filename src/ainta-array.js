@@ -5,6 +5,7 @@ import {
     _BT_OPTIONS_DOT,
     _IS_NOT_,
     _NOT_,
+    _NOT_A_REGULAR_,
     _NOT_AN_ARRAY,
     _OF_,
     AN_ARRAY,
@@ -17,10 +18,12 @@ import {
     NULL,
     NUMBER,
     OBJECT,
+    ONE,
     PASS,
+    STRING,
+    THE,
     TYPE_,
     TYPES,
-    STRING,
 } from './constants.js';
 import {
     buildResultPrefix,
@@ -48,8 +51,6 @@ import emptyOptions from './options.js';
  * 
  * Otherwise, `aintaArray()` returns `false`.
  * 
- * @TODO invalid if an item is null or an array, in an array of objects
- * 
  * @example
  * import { aintaArray } from '@0bdx/ainta';
  * 
@@ -62,8 +63,8 @@ import emptyOptions from './options.js';
  * aintaArray(null, 'list', { begin:'processList()' });
  * // "processList(): `list` is null not an array"
  *
- * aintaArray([1, true, 'ok'], 'a', { types:['number','string'] });
- * // "`a[1]` is type 'boolean', not one of the `options.types` 'number:string'"
+ * aintaArray(['ok', null, {}], 'a', { types:['object','string'] });
+ * // "`a[1]` is null, not one of the `options.types` 'object:string'"
  *
  * @param {any} value
  *    The value to validate.
@@ -146,7 +147,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
         // If the item's type is not included in `options.types`, return an
         // explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
-            const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+            const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
                 identifier && identifier + SQI,
@@ -160,8 +161,23 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
             ) + ',' + _NOT_ + (
                 types.length === 1
                     ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                    : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                    : ONE + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
             );
+        }
+
+        // If the item is `null` or an array, don't let it match 'object' in
+        // `options.types`.
+        if (definesTypes && type === OBJECT) {
+            const result = item === null
+                ? NULL
+                : isArray(item)
+                    ? AN_ARRAY
+                    : '';
+            if (result) return buildResultPrefix(
+                begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + IS_ + result + ',' + _NOT_A_REGULAR_ + OBJECT;
         }
 
         // The item's type is included in `options.types`, but if `options.pass`
@@ -358,7 +374,11 @@ export function aintaArrayTest(f) {
         "`ok[3]` is an array, not the `options.types` 'undefined'");
     equal(f([void 0,null], '', { begin:'All undefined', types:['undefined'] }),
         "All undefined: `[1] of an array` is null, not the `options.types` 'undefined'");
-    equal(f([{},null,[],Math], 'objs', { begin:'All objects', types:['object'] }),
+    equal(f([{},null,[],Math], 'objs', { begin:'Has a null', types:['object'] }),
+        "Has a null: `objs[1]` is null, not a regular object");
+    equal(f([{},new Date(),[],Math], 'objs', { begin:'Has an array', types:['object'] }),
+        "Has an array: `objs[2]` is an array, not a regular object");
+    equal(f([{},Math], 'objs', { begin:'All objects', types:['object'] }),
         false);
 
     // Typical `options.types` usage - items must be of two types.
@@ -406,9 +426,12 @@ export function aintaArrayTest(f) {
     equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'obj.a is a number',
         pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
         "obj.a is a number: `[2] of an array.a` is type 'string', not the `options.types` 'number'");
-    equal(f([{a:0},[],{a:1},{a:2},null,{a:3}], '', { begin:'the array and null are allowed',
+    equal(f([{a:0},[],{a:1},{a:2},null,{a:3}], '', { begin:'The array is not allowed',
         pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
-        false);
+        "The array is not allowed: `[1] of an array` is an array, not a regular object");
+    equal(f([{a:0},{a:1},{a:2},null,{a:3}], '', { begin:'The null is not allowed',
+        pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
+        "The null is not allowed: `[3] of an array` is null, not a regular object");
     equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'pass is false',
         pass:false, schema:{ a:{ types:['number']} }, types:['object'] }),
         false);

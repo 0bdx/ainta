@@ -15,8 +15,10 @@ import {
     IS_NULL,
     IS_TYPE_,
     NULL,
+    ONE,
     OBJECT,
     OPEN,
+    THE,
     TYPE_,
     TYPES,
     UNDEFINED,
@@ -141,7 +143,7 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
             // Otherwise, if the val's type is not included in `schema.types`,
             // return an explanation of the problem.
             } else if (types.indexOf(type) === -1) {
-                const THE_BT_OPT_TYPES_BT_ = 'the' + _BT_OPTIONS_DOT + TYPES + '` ';
+                const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
                 result = [key, IS_ + (
                     val === null
                         ? NULL
@@ -151,7 +153,7 @@ function validateAgainstSchema(obj, options, hasSchema, identifier) {
                     ) + ',' + _NOT_ + (
                         types.length === 1
                             ? THE_BT_OPT_TYPES_BT_ + quote(types[0])
-                            : 'one' + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
+                            : ONE + _OF_ + THE_BT_OPT_TYPES_BT_ + saq(types.join(':'))
                     )
                 ];
                 break;
