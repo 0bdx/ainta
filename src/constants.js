@@ -138,11 +138,17 @@ export const IS_NAN = IS_ + 'the special `NaN` value';
 /** @constant {string} IS_TYPE_ The literal string "is type" */
 export const IS_TYPE_ = IS_ + TYPE_;
 
+/** @constant {string} IS_NOT_ The literal string "is not " */
+export const IS_NOT_ = 'is' + _NOT_;
+
 /** @constant {string} _IS_NOT_ The literal string " is not " */
-export const _IS_NOT_ = ' is' + _NOT_;
+export const _IS_NOT_ = ' ' + IS_NOT_;
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 export const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
+
+/** @constant {string} IS_NOT_AN_ARRAY The literal string "is not an array" */
+export const IS_NOT_AN_ARRAY = IS_NOT_ + AN_ + ARRAY;
 
 /** @constant {string} _NOT_A_REGULAR_ The literal string " not a regular " */
 export const _NOT_A_REGULAR_ = _NOT_ + 'a regular ';

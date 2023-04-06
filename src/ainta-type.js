@@ -1,8 +1,12 @@
 import {
     _NOT_,
     _NOT_TYPE_,
+    _OF_,
+    AN_ARRAY,
     CANNOT_OPTIONS,
     IS_AN_ARRAY,
+    IS_NOT_,
+    IS_NOT_AN_ARRAY,
     IS_NULL,
     IS_TYPE_,
     STRING,
@@ -14,7 +18,8 @@ import {
     isRecognisedType,
     QS,
     quote,
-    sanitise
+    sanitise,
+    validateArrayOfStringsOption
 } from './helpers.js';
 import emptyOptions from './options.js';
 
@@ -59,36 +64,82 @@ export default function aintaType(
     identifier,
     options = emptyOptions,
 ) {
-    // Process the happy path as quickly as possible.
+    const optionsType = options.type;
+
+    // Process the basic happy path as quickly as possible, where `options.type`
+    // is a string.
     const type = typeof value;
-    if (type === options.type) return false;
+    if (type === optionsType) return false;
 
     // Build the first part of an explanation.
     const prefix = buildResultPrefix(options.begin, identifier);
 
-    // If `options.type` is invalid, return a helpful result.
-    const badOptionsType = prefix + CANNOT_OPTIONS + TYPE + '` ';
-    if (!(TYPE in options))
-        return `${badOptionsType}is${_NOT_}set`;
-    const optionsType = options.type;
-    if (optionsType === null)
-        return badOptionsType + IS_NULL + _NOT_TYPE_ + QS;
-    if (isArray(optionsType))
-        return badOptionsType + IS_AN_ARRAY + _NOT_TYPE_ + QS;
-    if (typeof optionsType !== STRING)
-        return badOptionsType + IS_TYPE_ + quote(typeof optionsType) + _NOT_ + QS;
-    if (!isRecognisedType(optionsType))
-        return badOptionsType + quote(sanitise(optionsType)) + _NOT_ + 'known';
+    // If `options.type` is missing or invalid, return a helpful result.
+    const optionsTypeExists = TYPE in options;
+    const optionsTypeIsArray = optionsTypeExists && isArray(optionsType);
+    if (optionsTypeExists && optionsTypeIsArray) {
+        const result = validateArrayOfStringsOption(TYPE, optionsType, true, true);
+        if (result) return prefix + result;
+    } else {
+        const result = !optionsTypeExists
+            ? IS_NOT_ + 'set'
+            : optionsType === null
+                ? IS_NULL + _NOT_TYPE_ + QS
+                : typeof optionsType !== STRING
+                    ? IS_TYPE_ + quote(typeof optionsType) + _NOT_ + QS
+                    : !isRecognisedType(optionsType)
+                        ? quote(sanitise(optionsType)) + _NOT_ + 'known'
+                        : '';
+        if (result) return prefix + CANNOT_OPTIONS + TYPE + '` ' + result;
+    }
 
-    // Otherwise, generate an explanation of what went wrong.
-    return prefix + (
-        value === null
-            ? IS_NULL + _NOT_TYPE_
-            : isArray(value)
-                ? IS_AN_ARRAY + _NOT_TYPE_
-                : IS_TYPE_ + quote(type) + _NOT_
-        ) + quote(optionsType)
-    ;
+    // If `options.type` is a string, generate an explanation of what went wrong.
+    if (!optionsTypeIsArray)
+        return prefix + (
+            value === null
+                ? IS_NULL + _NOT_TYPE_
+                : isArray(value)
+                    ? IS_AN_ARRAY + _NOT_TYPE_
+                    : IS_TYPE_ + quote(type) + _NOT_
+            ) + quote(optionsType);
+
+    // `options.type` is an array, so `value` should also be an array.
+    if (!isArray(value)) return prefix + IS_NOT_AN_ARRAY;
+
+    // In the special case where `options.type` is an empty array, `value` is
+    // allowed to contain any type of items. Equally, if `value` is an empty
+    // array, it cannot contain any invalid items.
+    const optionsTypeLength = optionsType.length;
+    const valueLength = value.length;
+    if (!optionsTypeLength) return false;
+
+    // Validate `value` against the `options.type` array.
+    for (let i=0; i<valueLength; i++) {
+        const item = value[i];
+        let valid = false;
+        for (let j=0; j<optionsTypeLength; j++) {
+            if (typeof item === optionsType[j]) {
+                valid = true;
+                break;
+            }
+        }
+        if (!valid) {
+            const SQI = '[' + i + ']';
+            return buildResultPrefix(
+                options.begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + (
+                item === null
+                    ? IS_NULL + _NOT_TYPE_
+                    : isArray(item)
+                        ? IS_AN_ARRAY + _NOT_TYPE_
+                        : IS_TYPE_ + quote(typeof item) + _NOT_
+                ) + quote(optionsType.join(':'));
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -102,8 +153,10 @@ export default function aintaType(
  *    Throws an `Error` if a test fails
  */
 export function aintaTypeTest(f) {
-    const equal = (actual, expected) => { if (actual !== expected) throw Error(
-        `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+    const e2l = e => e.stack.split('\n')[2].match(/([^\/]+\.js:\d+):\d+\)?$/)[1];
+    const equal = (actual, expected) => { if (actual === expected) return;
+        try { throw Error() } catch(err) { throw Error(`actual:\n${actual}\n` +
+            `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
 
     // Produces a helpful result when `options.type` is not set.
     equal(f(),
@@ -117,14 +170,14 @@ export function aintaTypeTest(f) {
     equal(f('str', '', { begin:'noType' }),
         "noType: A value cannot be validated, `options.type` is not set");
 
-    // Invalid `options.type` produces a helpful result.
+    // If `options.type` is not an array, and invalid, it produces a helpful result.
     equal(f(null, 'v', { type:void 0 }),
         "`v` cannot be validated, `options.type` is type 'undefined' not 'string'");
     equal(f(0.5, 'half', { type:null }),
         "`half` cannot be validated, `options.type` is null not type 'string'");
     // @ts-expect-error
-    equal(f(undefined, '-', { type:[] }),
-        "`-` cannot be validated, `options.type` is an array not type 'string'");
+    equal(f(undefined, '-', { type:{} }),
+        "`-` cannot be validated, `options.type` is type 'object' not 'string'");
     // @ts-expect-error
     equal(f(false, 'X', { type:NaN }), // no mention of the special `NaN` value
         "`X` cannot be validated, `options.type` is type 'number' not 'string'");
@@ -141,6 +194,30 @@ export function aintaTypeTest(f) {
     equal(f({}, 'o', { type:'\\potentially\\$"insecure";and also `\'too long\'`' }),
         "`o` cannot be validated, `options.type` '%5Cpotentially%5C$%22insecu...o long'%60' not known");
 
+    // If `options.type` is an array, and invalid, it produces a helpful result.
+    equal(f(null, 'v', { type:[void 0] }),
+        "`v` cannot be validated, `options.type[0]` is type 'undefined' not 'string'");
+    equal(f(0.5, 'half', { type:['number',null] }),
+        "`half` cannot be validated, `options.type[1]` is null not type 'string'");
+    // @ts-expect-error
+    equal(f(undefined, '-', { type:['boolean','boolean',{},'nope'] }), // @TODO maybe duplicates are invalid?
+        "`-` cannot be validated, `options.type[2]` is type 'object' not 'string'");
+    // @ts-expect-error
+    equal(f(false, 'X', { type:[NaN] }), // no mention of the special `NaN` value
+        "`X` cannot be validated, `options.type[0]` is type 'number' not 'string'");
+    // @ts-expect-error
+    equal(f(0.25, null, { begin:'bad()', type:[''] }),
+        "bad(): A value cannot be validated, `options.type[0]` '' not known");
+    // @ts-expect-error
+    equal(f([], 'arr', { type:['ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'] }),
+        "`arr` cannot be validated, `options.type[0]` 'ABCDEFGHIJKLMNOPQRSTU...34567890' not known");
+    // @ts-expect-error
+    equal(f(null, '/', { type:['<potentially>${insecure}'] }),
+        "`/` cannot be validated, `options.type[0]` '%3Cpotentially%3E$%7Binsecure%7D' not known");
+    // @ts-expect-error
+    equal(f({}, 'o', { type:['\\potentially\\$"insecure";and also `\'too long\'`'] }),
+        "`o` cannot be validated, `options.type[0]` '%5Cpotentially%5C$%22insecu...o long'%60' not known");
+
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error
     equal(f(String(1), 'String(1)', { foo:'bar', type:'string' }),
@@ -149,7 +226,13 @@ export function aintaTypeTest(f) {
     equal(f(null, 'NULL', { type:'boolean', zub:123 }),
         "`NULL` is null not type 'boolean'");
 
-    // options.type is 'bigint'.
+    // `options.type` is [].
+    equal(f([], 'empty', { type:[] }),
+        false);
+    equal(f([BigInt(0),true,_=>_,NaN,1,{},[],null,'','a',Symbol(1),,void 0], 'kitchen sink', { type:[] }),
+        false);
+
+    // `options.type` is 'bigint'.
     equal(f(BigInt(123), 'hugeNum', { begin:'BigInt Test', type:'bigint' }),
         false);
     equal(f(null, 'NULL', { begin:'BigInt Test', type:'bigint' }),
@@ -161,7 +244,43 @@ export function aintaTypeTest(f) {
     equal(f(BigInt, void 0, { type:'bigint' }),
         "A value is type 'function' not 'bigint'");
 
-    // options.type is 'boolean'.
+    // `options.type` is ['bigint'].
+    equal(f([], 'empty', { type:['bigint'] }),
+        false);
+    equal(f([BigInt(0),BigInt(1)], 'hugeNum', { type:['bigint'] }),
+        false);
+    equal(f(null, 'NULL', { begin:'BigInt Array Test', type:['bigint'] }),
+        "BigInt Array Test: `NULL` is not an array");
+    equal(f([null], 'NULL', { begin:'BigInt Array Test', type:['bigint'] }),
+        "BigInt Array Test: `NULL[0]` is null not type 'bigint'");
+    equal(f([[0,1],[1,0]], 'matrix', { type:['bigint'] }),
+        "`matrix[0]` is an array not type 'bigint'");
+    equal(f([BigInt(123),456], '', { begin:'BigInt Array Test', type:['bigint'] }),
+        "BigInt Array Test: `[1] of an array` is type 'number' not 'bigint'");
+    equal(f([BigInt(123),BigInt(456),BigInt,BigInt(789)], void 0, { type:['bigint'] }),
+        "`[2] of an array` is type 'function' not 'bigint'");
+    equal(f([,BigInt(123)], 'empty slot', { type:['bigint'] }),
+        "`empty slot[0]` is type 'undefined' not 'bigint'");
+
+    // `options.type` is ['bigint','undefined'].
+    equal(f([], 'empty', { type:['bigint','undefined'] }),
+        false);
+    equal(f([void 0,undefined], '2 undefined', { type:['bigint','undefined'] }),
+        false);
+    equal(f(Array(3), '3 empty slots', { type:['bigint','undefined'] }),
+        false);
+    equal(f([BigInt(0),BigInt(1)], '2 bigints', { type:['bigint','undefined'] }),
+        false);
+    equal(f([,BigInt(0),void 0,,BigInt(1),undefined], 'mix', { type:['bigint','undefined'] }),
+        false);
+    equal(f([void 0,33,undefined], '', { type:['bigint','undefined'] }),
+        "`[1] of an array` is type 'number' not 'bigint:undefined'");
+    equal(f([BigInt(0),BigInt(1),null], '2 bigints and null', { begin:'OK', type:['bigint','undefined'] }),
+        "OK: `2 bigints and null[2]` is null not type 'bigint:undefined'");
+    equal(f([,BigInt(0),void 0,,BigInt(1),[],undefined], void 0, { begin:'Mix', type:['bigint','undefined'] }),
+        "Mix: `[5] of an array` is an array not type 'bigint:undefined'");
+
+    // `options.type` is 'boolean'.
     equal(f(true, null, { begin:'Boolean Test', type:'boolean' }),
         false);
     equal(f(false, 'flag', { type:'boolean' }),
@@ -177,7 +296,7 @@ export function aintaTypeTest(f) {
     equal(f('true', void 0, { type:'boolean' }),
         "A value is type 'string' not 'boolean'");
 
-    // options.type is 'function'.
+    // `options.type` is 'function'.
     equal(f(()=>{}, 'noop', { begin:'Function Test', type:'function' }),
         false);
     equal(f(parseInt, void 0, { begin:'Function Test', type:'function' }),
@@ -195,7 +314,7 @@ export function aintaTypeTest(f) {
     equal(f(JSON, 'JSON', { begin:'Function Test', type:'function' }),
         "Function Test: `JSON` is type 'object' not 'function'");
 
-    // options.type is 'number'.
+    // `options.type` is 'number'.
     equal(f(99, 'red balloons', { begin:'Number Test', type:'number' }),
         false);
     equal(f(NaN, 'NaN', { type:'number' }),
@@ -213,7 +332,43 @@ export function aintaTypeTest(f) {
     equal(f(BigInt(0), 'big zero', { begin:'Number Test', type:'number' }),
         "Number Test: `big zero` is type 'bigint' not 'number'");
 
-    // options.type is 'object'.
+    // `options.type` is ['bigint','number'].
+    equal(f([], 'empty', { type:['bigint','number'] }),
+        false);
+    equal(f([NaN,-Infinity,9e9], 'three numbers', { type:['bigint','number'] }),
+        false);
+    equal(f([BigInt(0),BigInt(1)], 'two bigints', { type:['bigint','number'] }),
+        false);
+    equal(f([BigInt(0),55.55,BigInt('1'),Infinity], 'mix', { type:['bigint','number'] }),
+        false);
+    equal(f([33,,44,,55], '', { type:['bigint','number'] }),
+        "`[1] of an array` is type 'undefined' not 'bigint:number'");
+    equal(f([BigInt('1111'),null,BigInt(0)], 'two bigints and null', { begin:'OK', type:['bigint','number'] }),
+        "OK: `two bigints and null[1]` is null not type 'bigint:number'");
+    equal(f([1111,BigInt('0'),0b1111,BigInt(1),[],false], '', { begin:'Mix', type:['bigint','number'] }),
+        "Mix: `[4] of an array` is an array not type 'bigint:number'");
+
+    // `options.type` is ['bigint','number','undefined'].
+    equal(f([], 'empty', { type:['bigint','number','undefined'] }),
+        false);
+    equal(f([NaN,-Infinity,9e9], 'three numbers', { type:['bigint','number','undefined'] }),
+        false);
+    equal(f([BigInt(0),BigInt(1)], 'two bigints', { type:['bigint','number','undefined'] }),
+        false);
+    equal(f([void 0,undefined], '2 undefined', { type:['bigint','number','undefined'] }),
+        false);
+    equal(f(Array(3), '3 empty slots', { type:['bigint','number','undefined'] }),
+        false);
+    equal(f([,,BigInt(0),void 0,55.55,BigInt('1'),undefined,,,,Infinity], 'mix', { type:['bigint','number','undefined'] }),
+        false);
+    equal(f([33,,44,,55,,'66'], '', { type:['bigint','number','undefined'] }),
+        "`[6] of an array` is type 'string' not 'bigint:number:undefined'");
+    equal(f([BigInt('1111'),null,BigInt(0)], 'two bigints and null', { begin:'OK', type:['bigint','number','undefined'] }),
+        "OK: `two bigints and null[1]` is null not type 'bigint:number:undefined'");
+    equal(f([1111,BigInt('0'),0b1111,BigInt(1),[],false], '', { begin:'Mix', type:['bigint','number','undefined'] }),
+        "Mix: `[4] of an array` is an array not type 'bigint:number:undefined'");
+
+    // `options.type` is 'object'.
     equal(f({}, 'plain', {type:'object' }),
         false);
     equal(f(null, '', { begin:'Object Test', type:'object' }),
@@ -225,7 +380,7 @@ export function aintaTypeTest(f) {
     equal(f(Symbol(1), 'sym', { begin:'Object Test', type:'object' }),
         "Object Test: `sym` is type 'symbol' not 'object'");
 
-    // options.type is 'string'.
+    // `options.type` is 'string'.
     equal(f('', 'empty', { begin:'String Test', type:'string' }),
         false);
     equal(f('foo', 'literal "foo"', { begin:'String Test', type:'string' }),
@@ -239,8 +394,10 @@ export function aintaTypeTest(f) {
     equal(f(true, 'boolTrue', { begin:'', type:'string' }),
         "`boolTrue` is type 'boolean' not 'string'");
 
-    // options.type is 'symbol'.
+    // `options.type` is 'symbol'.
     equal(f(Symbol(55), 'fiftyFive', { begin:'Symbol Test', type:'symbol' }),
+        false);
+    equal(f(Symbol(), 'empty', { type:'symbol' }),
         false);
     equal(f(null, 'NULL', { begin:'Symbol Test', type:'symbol' }),
         "Symbol Test: `NULL` is null not type 'symbol'");
@@ -249,7 +406,7 @@ export function aintaTypeTest(f) {
     equal(f({}.nope, undefined, { type:'symbol' }),
         "A value is type 'undefined' not 'symbol'");
 
-    // options.type is 'undefined'.
+    // `options.type` is 'undefined'.
     equal(f(void 0, 'voidZero', { begin:'Undefined Test', type:'undefined' }),
         false);
     equal(f({}.nope, 'no such property', { begin:null, type:'undefined' }),
@@ -263,6 +420,20 @@ export function aintaTypeTest(f) {
     // @ts-expect-error
     equal(f(Math, 0, { begin:'Undefined Test', type:'undefined' }),
         "Undefined Test: A value is type 'object' not 'undefined'");
+
+    // `options.type` is ['boolean','function','object','string','symbol'].
+    equal(f([], 'empty', { type:['boolean','function','object','string','symbol'] }),
+        false);
+    equal(f([false,Math.min,/abc/,'',Symbol(),[],null], 'mix', { type:['boolean','function','object','string','symbol'] }),
+        false);
+    equal(f([false,Math.min,/abc/,'',Symbol(),1], 'has num', { type:['boolean','function','object','string','symbol'] }),
+        "`has num[5]` is type 'number' not 'boolean:function:object:string:symbol'");
+    equal(f([false,Math.min,void 0], '', { begin:'Has undef', type:['boolean','function','object','string','symbol'] }),
+        "Has undef: `[2] of an array` is type 'undefined' not 'boolean:function:object:string:symbol'");
+    equal(f([BigInt('123')], 'has_bigint', { begin:'Lots', type:['boolean','function','object','string','symbol'] }),
+        "Lots: `has_bigint[0]` is type 'bigint' not 'boolean:function:object:string:symbol'");
+    equal(f([null,/a/,/b/.test,...Array(3)], '', { type:['boolean','function','object','string','symbol'] }),
+        "`[3] of an array` is type 'undefined' not 'boolean:function:object:string:symbol'");
 
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error

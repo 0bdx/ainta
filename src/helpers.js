@@ -55,24 +55,29 @@ export const buildResultPrefix = (begin, identifier, unidentified) => {
 export const isArray = Array.isArray;
 
 /**
- * ### Recognises a `typeof` string.
+ * ### Recognises a `typeof` string, or an array of `typeof` strings.
  * @private
  *
- * @param {string} type
- *    One of the strings that JavaScript's `typeof` produces, eg "boolean".
+ * @param {string|string[]} type
+ *    One of the strings that JavaScript's `typeof` produces, or an array of
+ *    such strings, eg `"boolean"` or `["number","string","symbol"]`.
  * @returns {boolean}
  *    Returns true if `type` is a recognised `typeof` string.
  */
-export const isRecognisedType = type => [
-    BIGINT,
-    BOOLEAN,
-    FUNCTION,
-    NUMBER,
-    OBJECT,
-    STRING,
-    SYMBOL,
-    UNDEFINED,
-].indexOf(type) !== -1;
+export const isRecognisedType = type =>
+    !isArray(type)
+        ? [
+            BIGINT,
+            BOOLEAN,
+            FUNCTION,
+            NUMBER,
+            OBJECT,
+            STRING,
+            SYMBOL,
+            UNDEFINED,
+        ].indexOf(type) !== -1
+        : false
+;
 
 /**
  * ### Wraps a string or array of strings in single-quotes.
@@ -100,15 +105,20 @@ export const QO = quote(OBJECT);
 export const QS = quote(STRING);
 
 /**
- * ### Truncates a string to 32 characters, and then uri-encodes it.
+ * ### Truncates text to 32 characters, and then uri-encodes it.
  * @private
  *
- * @param {string} [text]
+ * If `text` is an array of strings, they are joined with the ':' character
+ * before processing. This is useful for `TypeOrTypesOf` arrays.
+ * 
+ * @param {string|string[]} [text]
  *    Text to sanitise.
  */
-export const sanitise = text =>
-    encodeURI(text.length <= 32 ? text
-        : `${text.slice(0, 21)}...${text.slice(-8)}`).replace(/%20/g, ' ')
+export const sanitise = text => {
+    const t = isArray(text) ? text.join(':') : text;
+    return encodeURI(t.length <= 32 ? t
+        : `${t.slice(0, 21)}...${t.slice(-8)}`).replace(/%20/g, ' ');
+}
 
 /**
  * ### Sanitises a string, and then wraps it in single-quotes.

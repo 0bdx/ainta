@@ -138,11 +138,17 @@ const IS_NAN = IS_ + 'the special `NaN` value';
 /** @constant {string} IS_TYPE_ The literal string "is type" */
 const IS_TYPE_ = IS_ + TYPE_;
 
+/** @constant {string} IS_NOT_ The literal string "is not " */
+const IS_NOT_ = 'is' + _NOT_;
+
 /** @constant {string} _IS_NOT_ The literal string " is not " */
-const _IS_NOT_ = ' is' + _NOT_;
+const _IS_NOT_ = ' ' + IS_NOT_;
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
+
+/** @constant {string} IS_NOT_AN_ARRAY The literal string "is not an array" */
+const IS_NOT_AN_ARRAY = IS_NOT_ + AN_ + ARRAY;
 
 /** @constant {string} _NOT_A_REGULAR_ The literal string " not a regular " */
 const _NOT_A_REGULAR_ = _NOT_ + 'a regular ';
@@ -186,24 +192,29 @@ const buildResultPrefix = (begin, identifier, unidentified) => {
 const isArray = Array.isArray;
 
 /**
- * ### Recognises a `typeof` string.
+ * ### Recognises a `typeof` string, or an array of `typeof` strings.
  * @private
  *
- * @param {string} type
- *    One of the strings that JavaScript's `typeof` produces, eg "boolean".
+ * @param {string|string[]} type
+ *    One of the strings that JavaScript's `typeof` produces, or an array of
+ *    such strings, eg `"boolean"` or `["number","string","symbol"]`.
  * @returns {boolean}
  *    Returns true if `type` is a recognised `typeof` string.
  */
-const isRecognisedType = type => [
-    BIGINT,
-    BOOLEAN,
-    FUNCTION,
-    NUMBER,
-    OBJECT,
-    STRING,
-    SYMBOL,
-    UNDEFINED,
-].indexOf(type) !== -1;
+const isRecognisedType = type =>
+    !isArray(type)
+        ? [
+            BIGINT,
+            BOOLEAN,
+            FUNCTION,
+            NUMBER,
+            OBJECT,
+            STRING,
+            SYMBOL,
+            UNDEFINED,
+        ].indexOf(type) !== -1
+        : false
+;
 
 /**
  * ### Wraps a string or array of strings in single-quotes.
@@ -231,15 +242,20 @@ const QO = quote(OBJECT);
 const QS = quote(STRING);
 
 /**
- * ### Truncates a string to 32 characters, and then uri-encodes it.
+ * ### Truncates text to 32 characters, and then uri-encodes it.
  * @private
  *
- * @param {string} [text]
+ * If `text` is an array of strings, they are joined with the ':' character
+ * before processing. This is useful for `TypeOrTypesOf` arrays.
+ * 
+ * @param {string|string[]} [text]
  *    Text to sanitise.
  */
-const sanitise = text =>
-    encodeURI(text.length <= 32 ? text
-        : `${text.slice(0, 21)}...${text.slice(-8)}`).replace(/%20/g, ' ');
+const sanitise = text => {
+    const t = isArray(text) ? text.join(':') : text;
+    return encodeURI(t.length <= 32 ? t
+        : `${t.slice(0, 21)}...${t.slice(-8)}`).replace(/%20/g, ' ');
+};
 
 /**
  * ### Sanitises a string, and then wraps it in single-quotes.
@@ -604,36 +620,82 @@ function aintaType(
     identifier,
     options = emptyOptions,
 ) {
-    // Process the happy path as quickly as possible.
+    const optionsType = options.type;
+
+    // Process the basic happy path as quickly as possible, where `options.type`
+    // is a string.
     const type = typeof value;
-    if (type === options.type) return false;
+    if (type === optionsType) return false;
 
     // Build the first part of an explanation.
     const prefix = buildResultPrefix(options.begin, identifier);
 
-    // If `options.type` is invalid, return a helpful result.
-    const badOptionsType = prefix + CANNOT_OPTIONS + TYPE + '` ';
-    if (!(TYPE in options))
-        return `${badOptionsType}is${_NOT_}set`;
-    const optionsType = options.type;
-    if (optionsType === null)
-        return badOptionsType + IS_NULL + _NOT_TYPE_ + QS;
-    if (isArray(optionsType))
-        return badOptionsType + IS_AN_ARRAY + _NOT_TYPE_ + QS;
-    if (typeof optionsType !== STRING)
-        return badOptionsType + IS_TYPE_ + quote(typeof optionsType) + _NOT_ + QS;
-    if (!isRecognisedType(optionsType))
-        return badOptionsType + quote(sanitise(optionsType)) + _NOT_ + 'known';
+    // If `options.type` is missing or invalid, return a helpful result.
+    const optionsTypeExists = TYPE in options;
+    const optionsTypeIsArray = optionsTypeExists && isArray(optionsType);
+    if (optionsTypeExists && optionsTypeIsArray) {
+        const result = validateArrayOfStringsOption(TYPE, optionsType, true, true);
+        if (result) return prefix + result;
+    } else {
+        const result = !optionsTypeExists
+            ? IS_NOT_ + 'set'
+            : optionsType === null
+                ? IS_NULL + _NOT_TYPE_ + QS
+                : typeof optionsType !== STRING
+                    ? IS_TYPE_ + quote(typeof optionsType) + _NOT_ + QS
+                    : !isRecognisedType(optionsType)
+                        ? quote(sanitise(optionsType)) + _NOT_ + 'known'
+                        : '';
+        if (result) return prefix + CANNOT_OPTIONS + TYPE + '` ' + result;
+    }
 
-    // Otherwise, generate an explanation of what went wrong.
-    return prefix + (
-        value === null
-            ? IS_NULL + _NOT_TYPE_
-            : isArray(value)
-                ? IS_AN_ARRAY + _NOT_TYPE_
-                : IS_TYPE_ + quote(type) + _NOT_
-        ) + quote(optionsType)
-    ;
+    // If `options.type` is a string, generate an explanation of what went wrong.
+    if (!optionsTypeIsArray)
+        return prefix + (
+            value === null
+                ? IS_NULL + _NOT_TYPE_
+                : isArray(value)
+                    ? IS_AN_ARRAY + _NOT_TYPE_
+                    : IS_TYPE_ + quote(type) + _NOT_
+            ) + quote(optionsType);
+
+    // `options.type` is an array, so `value` should also be an array.
+    if (!isArray(value)) return prefix + IS_NOT_AN_ARRAY;
+
+    // In the special case where `options.type` is an empty array, `value` is
+    // allowed to contain any type of items. Equally, if `value` is an empty
+    // array, it cannot contain any invalid items.
+    const optionsTypeLength = optionsType.length;
+    const valueLength = value.length;
+    if (!optionsTypeLength) return false;
+
+    // Validate `value` against the `options.type` array.
+    for (let i=0; i<valueLength; i++) {
+        const item = value[i];
+        let valid = false;
+        for (let j=0; j<optionsTypeLength; j++) {
+            if (typeof item === optionsType[j]) {
+                valid = true;
+                break;
+            }
+        }
+        if (!valid) {
+            const SQI = '[' + i + ']';
+            return buildResultPrefix(
+                options.begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + (
+                item === null
+                    ? IS_NULL + _NOT_TYPE_
+                    : isArray(item)
+                        ? IS_AN_ARRAY + _NOT_TYPE_
+                        : IS_TYPE_ + quote(typeof item) + _NOT_
+                ) + quote(optionsType.join(':'));
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -1169,6 +1231,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
             }
         }
     }
+
     return false;
 }
 
@@ -1388,6 +1451,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
             }
         }
     }
+
     return false;
 }
 

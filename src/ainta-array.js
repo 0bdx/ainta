@@ -205,6 +205,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
             }
         }
     }
+
     return false;
 }
 

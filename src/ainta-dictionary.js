@@ -223,6 +223,7 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
             }
         }
     }
+
     return false;
 }
 
