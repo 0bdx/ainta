@@ -206,13 +206,14 @@ const isRecognisedType = type => [
 ].indexOf(type) !== -1;
 
 /**
- * ### Wraps a string in single-quotes.
+ * ### Wraps a string or array of strings in single-quotes.
  * @private
  *
- * @param {string} [text]
+ * @param {string|string[]} [text]
  *    Text to wrap in single quotes.
  */
-const quote = text => "'" + text + "'";
+const quote = text =>
+    "'" + (Array.isArray(text) ? text.join(':') : text) + "'";
 
 /** @constant {string} QB The literal string "'boolean'" */
 const QB = quote(BOOLEAN);
@@ -455,9 +456,32 @@ const validateSchemaOption = (schema, has) => {
 };
 
 /**
- * ### JavaScript type to expect, eg "boolean" or "undefined".
+ * ### The string name of a JavaScript type, eg `"boolean"` or `"undefined"`.
+ * 
+ * This is the complete set of possible values that JavaScript's built in
+ * `typeof` is able to produce.
+ * 
+ * `typeof` has a few surprises up its sleeve. For example, `null` is "object"
+ * and `NaN` is "number".
  *
  * @typedef {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} TypeOf
+ */
+
+/**
+ * ### Describes the types an array can contain, eg `["object"]`.
+ * 
+ * - `["bigint","number"]` describes an array containing only numeric values
+ * - `["boolean"]` describes an array containing only `true` and `false`
+ * - `["string","undefined"]` can contain strings, `undefined` and 'empty slots'
+ * - `[]` means an array which can contain any value
+ *
+ * @typedef {TypeOf[]} TypesOf
+ */
+
+/**
+ * ### One type, or an array of certain types, eg `"number"` or `["string"]`.
+ *
+ * @typedef {TypeOf|TypesOf} TypeOrTypesOf
  */
 
 // /**
@@ -506,10 +530,11 @@ const validateSchemaOption = (schema, has) => {
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
  * @property {Schema} [schema]
  *    Optional object which describes an object.
- * @property {TypeOf} [type]
- *    Optional JavaScript type to expect, eg "boolean" or "undefined".
- * @property {TypeOf[]} [types]
- *    Optional array of JS types to expect, eg ["bigint","number"].
+ * @property {TypeOrTypesOf} [type]
+ *    Optional JavaScript type to expect, eg "number", ["object"] or "undefined".
+ * @property {TypeOrTypesOf[]} [types]
+ *    Optional array of JS types to expect, eg ["boolean"] for `true` or `false`
+ *    or [["bigint","number"],"undefined"] for an optional array of numerics.  
  *    If missing, the property is allowed to be any type.
  */
 

@@ -3,9 +3,28 @@
  */
 export type Ainta = (value: any, identifier?: string, options?: Options) => false | string;
 /**
- * ### JavaScript type to expect, eg "boolean" or "undefined".
+ * ### The string name of a JavaScript type, eg `"boolean"` or `"undefined"`.
+ *
+ * This is the complete set of possible values that JavaScript's built in
+ * `typeof` is able to produce.
+ *
+ * `typeof` has a few surprises up its sleeve. For example, `null` is "object"
+ * and `NaN` is "number".
  */
 export type TypeOf = 'bigint' | 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined';
+/**
+ * ### Describes the types an array can contain, eg `["object"]`.
+ *
+ * - `["bigint","number"]` describes an array containing only numeric values
+ * - `["boolean"]` describes an array containing only `true` and `false`
+ * - `["string","undefined"]` can contain strings, `undefined` and 'empty slots'
+ * - `[]` means an array which can contain any value
+ */
+export type TypesOf = TypeOf[];
+/**
+ * ### One type, or an array of certain types, eg `"number"` or `["string"]`.
+ */
+export type TypeOrTypesOf = TypeOf | TypeOf[];
 /**
  * ### A configuration object, used by all `ainta` functions.
  *
@@ -75,14 +94,15 @@ export type Options = {
      */
     schema?: Schema;
     /**
-     * Optional JavaScript type to expect, eg "boolean" or "undefined".
+     * Optional JavaScript type to expect, eg "number", ["object"] or "undefined".
      */
-    type?: TypeOf;
+    type?: TypeOrTypesOf;
     /**
-     * Optional array of JS types to expect, eg ["bigint","number"].
+     * Optional array of JS types to expect, eg ["boolean"] for `true` or `false`
+     * or [["bigint","number"],"undefined"] for an optional array of numerics.
      * If missing, the property is allowed to be any type.
      */
-    types?: TypeOf[];
+    types?: TypeOrTypesOf[];
 };
 /**
  * ### An object with a `test()` function. Typically a JavaScript `RegExp`.

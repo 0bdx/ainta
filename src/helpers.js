@@ -75,13 +75,14 @@ export const isRecognisedType = type => [
 ].indexOf(type) !== -1;
 
 /**
- * ### Wraps a string in single-quotes.
+ * ### Wraps a string or array of strings in single-quotes.
  * @private
  *
- * @param {string} [text]
+ * @param {string|string[]} [text]
  *    Text to wrap in single quotes.
  */
-export const quote = text => "'" + text + "'";
+export const quote = text =>
+    "'" + (Array.isArray(text) ? text.join(':') : text) + "'";
 
 /** @constant {string} QB The literal string "'boolean'" */
 export const QB = quote(BOOLEAN);
