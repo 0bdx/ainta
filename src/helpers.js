@@ -133,6 +133,17 @@ export const sanitise = text => {
 export const saq = text => quote(sanitise(text));
 
 /**
+ * ### Renders a 'typed array', to be used as part of an explanation.
+ *
+ * @param {(string|string[])[]} types
+ *    An array, containing a mixture of strings and arrays-of-strings.
+ */
+export const stringifyTypes = types => quote(
+    types
+        .map(type => isArray(type) ? `[${type.join(':')}]` : type)
+        .join(':'));
+
+/**
  * ### Validates an option which should be an array of strings.
  * @private
  * 
@@ -272,7 +283,7 @@ export const validateRxishOption = (key, val, has) => {
  * ### Validates an option which describes an object.
  * @private
  * 
- * @TODO refactor, it's too long a repetitive
+ * @TODO refactor, it's too long and repetitive
  *
  * @param {any} schema
  *    The value of the option, which must be an object to be valid.
@@ -309,23 +320,41 @@ export const validateSchemaOption = (schema, has) => {
                                     ? '.' + TYPES + '` ' + IS_TYPE_ + quote(typeof val) + _NOT_ + AN_ARRAY
                                     : '';
                             if (!result) {
-                                for (let i=0, l=val.length; i<l; i++) {
+                                for (let i=0, valLen=val.length; i<valLen; i++) {
                                     const item = val[i];
-                                    result = item === null
-                                        ? IS_NULL + _NOT_TYPE_ + QS
-                                        : isArray(item)
-                                            ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                                    if (isArray(item)) {
+                                        for (let j=0, itemLen=item.length; j<itemLen; j++) {
+                                            const sub = item[j];
+                                            result = sub === null
+                                                ? IS_NULL + _NOT_TYPE_ + QS
+                                                : isArray(sub)
+                                                    ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                                                    : typeof sub !== STRING
+                                                        ? IS_TYPE_ + quote(typeof sub) + _NOT_ + QS
+                                                        : !isRecognisedType(sub)
+                                                            ? saq(sub) + _NOT_ + 'known'
+                                                            : '';
+                                            if (result) {
+                                                result = '.' + key + '[' + i + '][' + j + ']` ' + result;
+                                                break there;
+                                            }
+                                        }
+                                    } else {
+                                        result = item === null
+                                            ? IS_NULL + _NOT_TYPE_ + QS
                                             : typeof item !== STRING
                                                 ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
                                                 : !isRecognisedType(item)
                                                     ? saq(item) + _NOT_ + 'known'
                                                     : '';
-                                    if (result) {
-                                        result = '.' + key + '[' + i + ']` ' + result;
-                                        break there;
+                                        if (result) {
+                                            result = '.' + key + '[' + i + ']` ' + result;
+                                            break there;
+                                        }
                                     }
                                 }                    
                             }
+                        // @TODO more `schema` properties
                     }
                 }
             }

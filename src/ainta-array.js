@@ -21,7 +21,7 @@ import {
     ONE,
     PASS,
     STRING,
-    THE,
+    THE_BT_OPT_TYPES_BT_,
     TYPE_,
     TYPES,
 } from './constants.js';
@@ -147,7 +147,6 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
         // If the item's type is not included in `options.types`, return an
         // explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
-            const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
                 identifier && identifier + SQI,
@@ -293,7 +292,6 @@ export function aintaArrayTest(f) {
         "An array cannot be validated, `options.types` is type 'number' not an array");
     equal(f([3], 'three', { types:['string',null,'bigint'] }),
         "`three` cannot be validated, `options.types[1]` is null not type 'string'");
-    // @ts-expect-error
     equal(f([4], 'four', { types:['string','bigint',[]] }),
         "`four` cannot be validated, `options.types[2]` is an array not type 'string'");
     // @ts-expect-error

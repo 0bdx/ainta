@@ -25,7 +25,7 @@ import {
     ONE,
     PASS,
     STRING,
-    THE,
+    THE_BT_OPT_TYPES_BT_,
     TYPE_,
     TYPES,
 } from './constants.js';
@@ -180,7 +180,6 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
         // If the value's type is not included in `options.types`, return an
         // explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
-            const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
             return buildResultPrefix(
                 begin,
                 identifier && identifier + '.' + key,
@@ -332,7 +331,6 @@ export function aintaDictionaryTest(f) {
         "A dictionary cannot be validated, `options.types` is type 'number' not an array");
     equal(f({f:3}, 'three', { types:['string',null,'bigint'] }),
         "`three` cannot be validated, `options.types[1]` is null not type 'string'");
-    // @ts-expect-error
     equal(f({f:4}, 'four', { types:['string','bigint',[]] }),
         "`four` cannot be validated, `options.types[2]` is an array not type 'string'");
     // @ts-expect-error

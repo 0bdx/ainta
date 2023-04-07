@@ -120,6 +120,9 @@ export const THE = 'the';
 /** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
 export const _BT_OPTIONS_DOT = ' `options.';
 
+/** @constant {string} THE_BT_OPT_TYPES_BT_ The literal string "the `options.types` " */
+export const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
+
 /** @constant {string} CANNOT_OPTIONS The literal string "cannot be validated, `options." */
 export const CANNOT_OPTIONS = 'cannot be validated,' + _BT_OPTIONS_DOT;
 
