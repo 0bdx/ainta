@@ -42,20 +42,14 @@ const SYMBOL = 'symbol';
 /** @constant {string} UNDEFINED The literal string "undefined" */
 const UNDEFINED = 'undefined';
 
-/** @constant {string} ENUM The literal string "enum" */
-const ENUM = 'enum';
-
 /** @constant {string} GTE The literal string "gte" */
 const GTE = 'gte';
 
+/** @constant {string} IS The literal string "is" */
+const IS = 'is';
+
 /** @constant {string} KEY The literal string "key" */
 const KEY = 'key';
-
-// /** @constant {string} KIND The literal string "kind" */
-// export const KIND = 'kind';
-// 
-// /** @constant {string} KINDS The literal string "kinds" */
-// export const KINDS = 'kinds';
 
 /** @constant {string} LEAST The literal string "least" */
 const LEAST = 'least';
@@ -103,7 +97,7 @@ const A_DICTIONARY = 'a dictionary';
 const AN_OBJECT = AN_ + OBJECT;
 
 /** @constant {string} IS_ The literal string "is " */
-const IS_ = 'is ';
+const IS_ = IS + ' ';
 
 /** @constant {string} ONE The literal string "one" */
 const ONE = 'one';
@@ -142,10 +136,13 @@ const IS_NAN = IS_ + 'the special `NaN` value';
 const IS_TYPE_ = IS_ + TYPE_;
 
 /** @constant {string} IS_NOT_ The literal string "is not " */
-const IS_NOT_ = 'is' + _NOT_;
+const IS_NOT_ = IS + _NOT_;
 
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 const _IS_NOT_ = ' ' + IS_NOT_;
+
+/** @constant {string} _IS_NOT_IN_ The literal string " is not in " */
+const _IS_NOT_IN_ = _IS_NOT_ + 'in ';
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
@@ -244,6 +241,9 @@ const QO = quote(OBJECT);
 /** @constant {string} QS The literal string "'string'" */
 const QS = quote(STRING);
 
+/** @constant {string} QS The literal string "'boolean:number:string'" */
+const QBNS = quote(BOOLEAN + ':' + NUMBER + ':' + STRING);
+
 /**
  * ### Truncates text to 32 characters, and then uri-encodes it.
  * @private
@@ -284,43 +284,50 @@ const stringifyTypes = types => quote(
         .join(':'));
 
 /**
- * ### Validates an option which should be an array of strings.
+ * ### Validates an option which should be an array of scalars.
  * @private
  * 
+ * A 'scalar', in this context, is a boolean, number or string.
+ * 
+ * @TODO maybe add BigInt, null and Symbol
+ * 
  * @param {string} key
- *    The name of the option to validate, eg "enum".
+ *    The name of the option to validate, eg "isnt".
  * @param {any} val
- *    The value of the option, which must be an array of strings to be valid.
+ *    The value of the option, which must be an array of scalars to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
- * @param {boolean} [allTypes]
- *    An optional flag which, if `true`, means strings must all be types.
+ * @param {'boolean'|'number'|'string'} mustContain
+ *    The array must contain at least one item of this type to be valid..
  * @returns {undefined|string}
- *    Returns undefined if `val` is valid, or an explanation if not.
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
-const validateArrayOfStringsOption = (key, val, has, allTypes) => {
+const validateArrayOfScalarsOption = (key, val, has, mustContain) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_AN_ARRAY
             : !isArray(val)
                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : !allTypes && !val.length
-                    ? 'is empty' // eg for `options.enum`
+                : !val.length
+                    ? 'is empty' // eg for `options.not`
                     : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
+        let doesContain = false;
         for (let i=0, l=val.length; i<l; i++) {
             const item = val[i];
+            const type = typeof item;
             const result = item === null
-            ? IS_NULL + _NOT_TYPE_ + QS
-            : isArray(item)
-                ? IS_AN_ARRAY + _NOT_TYPE_ + QS
-                : typeof item !== STRING
-                    ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
-                    : allTypes && !isRecognisedType(item)
-                        ? saq(item) + _NOT_ + 'known'
+                ? IS_NULL + _NOT_TYPE_ + QBNS
+                : isArray(item)
+                    ? IS_AN_ARRAY + _NOT_TYPE_ + QBNS
+                    : type !== BOOLEAN && type !== NUMBER && type !== STRING
+                        ? IS_TYPE_ + quote(type) + _NOT_ + QBNS
                         : '';
             if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+            if (type === mustContain) doesContain = true;
         }
+        if (!doesContain)
+            return CANNOT_OPTIONS + key + '` contains no ' + mustContain + 's';
     }
 };
 
@@ -335,7 +342,7 @@ const validateArrayOfStringsOption = (key, val, has, allTypes) => {
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  * @returns {undefined|string}
- *    Returns undefined if `val` is valid, or an explanation if not.
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
 const validateBooleanOption = (key, val, has) => {
     if (has) {
@@ -365,7 +372,7 @@ const validateBooleanOption = (key, val, has) => {
  * @param {boolean} [notNegative]
  *    An optional flag which, if set to `true`, prevents `val` from being -ve.
  * @returns {undefined|string}
- *    Returns undefined if `val` is valid, or an explanation if not.
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
 const validateNumericOption = (key, val, has, notZero, notNegative) => {
     if (has) {
@@ -504,6 +511,49 @@ const validateSchemaOption = (schema, has) => {
 };
 
 /**
+ * ### Validates an option which should be an array of types.
+ * @private
+ * 
+ * A 'type', in this context, is one of the strings that JavaScript's `typeof`
+ * can produce, like `"boolean"` or `"undefined"`.
+ * 
+ * @param {string} key
+ *    The name of the option to validate, eg "types".
+ * @param {any} val
+ *    The value of the option, which must be an array of types to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
+ */
+const validateArrayOfTypesOption = (key, val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_AN_ARRAY
+            : !isArray(val)
+                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+                : '';
+                // : !allTypes && !val.length
+                //     ? 'is empty' // eg for `options.not`
+                //     : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+        for (let i=0, l=val.length; i<l; i++) {
+            const item = val[i];
+            const result = item === null
+                ? IS_NULL + _NOT_TYPE_ + QS
+                : isArray(item)
+                    ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                    : typeof item !== STRING
+                        ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
+                        : !isRecognisedType(item)
+                            ? saq(item) + _NOT_ + 'known'
+                            : '';
+            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+        }
+    }
+};
+
+/**
  * ### The string name of a JavaScript type, eg `"boolean"` or `"undefined"`.
  * 
  * This is the complete set of possible values that JavaScript's built in
@@ -545,16 +595,19 @@ const validateSchemaOption = (schema, has) => {
  * 
  * Different options are used by different `ainta` functions. For example:
  * - `options.before` is used all the `ainta` functions
- * - `options.enum` is only used by `aintaString()` and `aintaArray()`
  * - `options.gte` is only used by `aintaNumber()`
+ * - `options.is` is used by `aintaBoolean()`, `aintaNumber()` and
+ *   `aintaString()`.
  *
  * @typedef {object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
- * @property {string[]} [enum]
- *    Optional array of strings.
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {(boolean|number|string)[]} [is]
+ *    Optional array of valid values.
+ * @property {(boolean|number|string)[]} [isnt]
+ *    Optional array of invalid values.
  * @property {Rxish} [key]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
  * @property {number} [least]
@@ -576,6 +629,8 @@ const validateSchemaOption = (schema, has) => {
  *    Optional flag. If true, array items are validated using `options`.
  * @property {Rxish} [rx]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+ * @property {string} [split]
+ *    Optional string which tells `aintaList()` how to turn strings into arrays.
  * @property {Schema} [schema]
  *    Optional object which describes an object.
  * @property {TypeOrTypesOf} [type]
@@ -666,7 +721,7 @@ function aintaType(
     const optionsTypeExists = TYPE in options;
     const optionsTypeIsArray = optionsTypeExists && isArray(optionsType);
     if (optionsTypeExists && optionsTypeIsArray) {
-        const result = validateArrayOfStringsOption(TYPE, optionsType, true, true);
+        const result = validateArrayOfTypesOption(TYPE, optionsType, true);
         if (result) return prefix + result;
     } else {
         const result = !optionsTypeExists
@@ -832,7 +887,7 @@ function aintaNumber(
  * 
  * Else, if the first argument fails any of the following conditions, it also
  * returns an explanation of what went wrong:
- * - `options.enum` - if set, this is an array of valid strings
+ * - `options.is` - if set, this is an array containing valid strings
  * - `options.max` - if set, this is the maximum allowed string length
  * - `options.min` - if set, this is the minimum allowed string length
  * - `options.rx` - if set, this is an object which has a `test()` function
@@ -854,7 +909,7 @@ function aintaNumber(
  * aintaString(99, 'redBalloons', { begin:'fly()' });
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  * 
- * equal(f('Fum!', null, { enum:['Fee','Fi','Fo'] }),
+ * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
  * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
  *
  * @param {any} value
@@ -877,12 +932,12 @@ function aintaString(
     let result = aintaType(value, identifier, { ...options, type:STRING });
     if (result) return result;
 
-    // If `options.enum`, `.max`, `.min` or `.rx` are invalid, return a
-    // helpful result. Note that setting these to `undefined` may be useful in
-    // some cases, so that `{ max:undefined }` acts the same way as `{}`, which
+    // If `options.is`, `.max`, `.min` or `.rx` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ max:undefined }` acts the same way as `{}`, which
     // is why we use `options.max !== void 0` instead of `"max" in options`.
-    const optionsEnum = options.enum;
-    const hasEnum = optionsEnum !== void 0;
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsMax = options.max;
     const hasMax = optionsMax !== void 0;
     const optionsMin = options.min;
@@ -890,7 +945,7 @@ function aintaString(
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
     result =
-        validateArrayOfStringsOption(ENUM, optionsEnum, hasEnum)
+        validateArrayOfScalarsOption(IS, optionsIs, hasIs, STRING)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(RX, optionsRx, hasRx)
@@ -898,11 +953,11 @@ function aintaString(
     // If `options.max` and `options.min` are both being used, but `max` is less
     // than `min`, return a helpful result.
      || (hasMax && hasMin && optionsMax < optionsMin
-        ? CANNOT_OPTIONS + 'max` < `options.min`'
+        ? CANNOT_OPTIONS + MAX + '` <' + _BT_OPTIONS_DOT + MIN + '`'
 
-        // Check that `value` exists in the `options.enum` array, if set.
-        : hasEnum && optionsEnum.indexOf(value) == -1
-            ? saq(value) + ' is not in ' + saq(optionsEnum.join(':'))
+        // Check that `value` exists in the `options.is` array, if set.
+        : hasIs && optionsIs.indexOf(value) == -1
+            ? saq(value) + _IS_NOT_IN_ + saq(optionsIs.join(':'))
 
             // Check that `value` is not longer than `options.max`, if set.
             : hasMax && optionsMax < value.length
@@ -1268,7 +1323,7 @@ function aintaArray(
         validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
-     || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
+     || validateArrayOfTypesOption(TYPES, optionsTypes, hasTypes)
 
     // If `options.least` and `options.most` are both being used, but `least` is
     // more than `most`, return a helpful result.
@@ -1488,7 +1543,7 @@ function aintaDictionary(
      || validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
-     || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
+     || validateArrayOfTypesOption(TYPES, optionsTypes, hasTypes)
 
     // If `options.least` and `options.most` are both being used, but `least` is
     // more than `most`, return a helpful result.

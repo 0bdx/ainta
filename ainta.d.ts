@@ -32,8 +32,9 @@ export type TypeOrTypesOf = TypeOf | TypeOf[];
  *
  * Different options are used by different `ainta` functions. For example:
  * - `options.before` is used all the `ainta` functions
- * - `options.enum` is only used by `aintaString()` and `aintaArray()`
  * - `options.gte` is only used by `aintaNumber()`
+ * - `options.is` is used by `aintaBoolean()`, `aintaNumber()` and
+ *   `aintaString()`.
  */
 export type Options = {
     /**
@@ -41,13 +42,17 @@ export type Options = {
      */
     begin?: string;
     /**
-     * Optional array of strings.
-     */
-    enum?: string[];
-    /**
      * Optional minimum value. Short for 'Greater Than or Equal'.
      */
     gte?: number;
+    /**
+     * Optional array of valid values.
+     */
+    is?: (boolean | number | string)[];
+    /**
+     * Optional array of invalid values.
+     */
+    isnt?: (boolean | number | string)[];
     /**
      * Optional object with a `test()` function. Typically a JavaScript `RegExp`.
      */
@@ -89,6 +94,10 @@ export type Options = {
      * Optional object with a `test()` function. Typically a JavaScript `RegExp`.
      */
     rx?: Rxish;
+    /**
+     * Optional string which tells `aintaList()` how to turn strings into arrays.
+     */
+    split?: string;
     /**
      * Optional object which describes an object.
      */
@@ -377,7 +386,7 @@ export function aintaObject(value: any, identifier?: string, options?: Options):
  *
  * Else, if the first argument fails any of the following conditions, it also
  * returns an explanation of what went wrong:
- * - `options.enum` - if set, this is an array of valid strings
+ * - `options.is` - if set, this is an array containing valid strings
  * - `options.max` - if set, this is the maximum allowed string length
  * - `options.min` - if set, this is the minimum allowed string length
  * - `options.rx` - if set, this is an object which has a `test()` function
@@ -399,7 +408,7 @@ export function aintaObject(value: any, identifier?: string, options?: Options):
  * aintaString(99, 'redBalloons', { begin:'fly()' });
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  *
- * equal(f('Fum!', null, { enum:['Fee','Fi','Fo'] }),
+ * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
  * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
  *
  * @param {any} value

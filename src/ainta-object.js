@@ -645,7 +645,7 @@ export function aintaObjectTest(f) {
         false);
 
     // `options.schema` - using 'string' options on non-arrays.
-    schema = { str:{ enum:['a','aa','AAA','aaaa','aaaaa'], max:4, min:2, rx:/a/, types:['string'] } };
+    schema = { str:{ is:['a','aa','AAA','aaaa','aaaaa'], max:4, min:2, rx:/a/, types:['string'] } };
     equal(f({ str:'aaaaa' }, '', { schema }),
         "`str of an object` 'aaaaa' is not max 4");
     equal(f({ str:'a' }, 'a', { schema }),

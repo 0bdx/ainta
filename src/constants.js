@@ -39,20 +39,17 @@ export const SYMBOL = 'symbol';
 /** @constant {string} UNDEFINED The literal string "undefined" */
 export const UNDEFINED = 'undefined';
 
-/** @constant {string} ENUM The literal string "enum" */
-export const ENUM = 'enum';
-
 /** @constant {string} GTE The literal string "gte" */
 export const GTE = 'gte';
 
+/** @constant {string} IS The literal string "is" */
+export const IS = 'is';
+
+/** @constant {string} ISNT The literal string "isnt" (without an apostrophe) */
+export const ISNT = 'isnt';
+
 /** @constant {string} KEY The literal string "key" */
 export const KEY = 'key';
-
-// /** @constant {string} KIND The literal string "kind" */
-// export const KIND = 'kind';
-// 
-// /** @constant {string} KINDS The literal string "kinds" */
-// export const KINDS = 'kinds';
 
 /** @constant {string} LEAST The literal string "least" */
 export const LEAST = 'least';
@@ -103,7 +100,7 @@ export const A_DICTIONARY = 'a dictionary';
 export const AN_OBJECT = AN_ + OBJECT;
 
 /** @constant {string} IS_ The literal string "is " */
-export const IS_ = 'is ';
+export const IS_ = IS + ' ';
 
 /** @constant {string} ONE The literal string "one" */
 export const ONE = 'one';
@@ -142,10 +139,13 @@ export const IS_NAN = IS_ + 'the special `NaN` value';
 export const IS_TYPE_ = IS_ + TYPE_;
 
 /** @constant {string} IS_NOT_ The literal string "is not " */
-export const IS_NOT_ = 'is' + _NOT_;
+export const IS_NOT_ = IS + _NOT_;
 
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 export const _IS_NOT_ = ' ' + IS_NOT_;
+
+/** @constant {string} _IS_NOT_IN_ The literal string " is not in " */
+export const _IS_NOT_IN_ = _IS_NOT_ + 'in ';
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 export const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;

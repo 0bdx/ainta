@@ -40,16 +40,19 @@
  * 
  * Different options are used by different `ainta` functions. For example:
  * - `options.before` is used all the `ainta` functions
- * - `options.enum` is only used by `aintaString()` and `aintaArray()`
  * - `options.gte` is only used by `aintaNumber()`
+ * - `options.is` is used by `aintaBoolean()`, `aintaNumber()` and
+ *   `aintaString()`.
  *
  * @typedef {object} Options
  * @property {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
- * @property {string[]} [enum]
- *    Optional array of strings.
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {(boolean|number|string)[]} [is]
+ *    Optional array of valid values.
+ * @property {(boolean|number|string)[]} [isnt]
+ *    Optional array of invalid values.
  * @property {Rxish} [key]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
  * @property {number} [least]
@@ -71,6 +74,8 @@
  *    Optional flag. If true, array items are validated using `options`.
  * @property {Rxish} [rx]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+ * @property {string} [split]
+ *    Optional string which tells `aintaList()` how to turn strings into arrays.
  * @property {Schema} [schema]
  *    Optional object which describes an object.
  * @property {TypeOrTypesOf} [type]

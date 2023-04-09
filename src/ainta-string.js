@@ -1,8 +1,10 @@
 import aintaType from './ainta-type.js';
 import {
+    _BT_OPTIONS_DOT,
     _IS_NOT_,
+    _IS_NOT_IN_,
     CANNOT_OPTIONS,
-    ENUM,
+    IS,
     FUNCTION,
     MAX,
     MIN,
@@ -12,7 +14,7 @@ import {
 import {
     buildResultPrefix,
     saq,
-    validateArrayOfStringsOption,
+    validateArrayOfScalarsOption,
     validateNumericOption,
     validateRxishOption,
 } from './helpers.js';
@@ -26,7 +28,7 @@ import emptyOptions from './options.js';
  * 
  * Else, if the first argument fails any of the following conditions, it also
  * returns an explanation of what went wrong:
- * - `options.enum` - if set, this is an array of valid strings
+ * - `options.is` - if set, this is an array containing valid strings
  * - `options.max` - if set, this is the maximum allowed string length
  * - `options.min` - if set, this is the minimum allowed string length
  * - `options.rx` - if set, this is an object which has a `test()` function
@@ -48,7 +50,7 @@ import emptyOptions from './options.js';
  * aintaString(99, 'redBalloons', { begin:'fly()' });
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  * 
- * equal(f('Fum!', null, { enum:['Fee','Fi','Fo'] }),
+ * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
  * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
  *
  * @param {any} value
@@ -71,12 +73,12 @@ export default function aintaString(
     let result = aintaType(value, identifier, { ...options, type:STRING });
     if (result) return result;
 
-    // If `options.enum`, `.max`, `.min` or `.rx` are invalid, return a
-    // helpful result. Note that setting these to `undefined` may be useful in
-    // some cases, so that `{ max:undefined }` acts the same way as `{}`, which
+    // If `options.is`, `.max`, `.min` or `.rx` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ max:undefined }` acts the same way as `{}`, which
     // is why we use `options.max !== void 0` instead of `"max" in options`.
-    const optionsEnum = options.enum;
-    const hasEnum = optionsEnum !== void 0;
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsMax = options.max;
     const hasMax = optionsMax !== void 0;
     const optionsMin = options.min;
@@ -84,7 +86,7 @@ export default function aintaString(
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
     result =
-        validateArrayOfStringsOption(ENUM, optionsEnum, hasEnum)
+        validateArrayOfScalarsOption(IS, optionsIs, hasIs, STRING)
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(RX, optionsRx, hasRx)
@@ -92,11 +94,11 @@ export default function aintaString(
     // If `options.max` and `options.min` are both being used, but `max` is less
     // than `min`, return a helpful result.
      || (hasMax && hasMin && optionsMax < optionsMin
-        ? CANNOT_OPTIONS + 'max` < `options.min`'
+        ? CANNOT_OPTIONS + MAX + '` <' + _BT_OPTIONS_DOT + MIN + '`'
 
-        // Check that `value` exists in the `options.enum` array, if set.
-        : hasEnum && optionsEnum.indexOf(value) == -1
-            ? saq(value) + ' is not in ' + saq(optionsEnum.join(':'))
+        // Check that `value` exists in the `options.is` array, if set.
+        : hasIs && optionsIs.indexOf(value) == -1
+            ? saq(value) + _IS_NOT_IN_ + saq(optionsIs.join(':'))
 
             // Check that `value` is not longer than `options.max`, if set.
             : hasMax && optionsMax < value.length
@@ -131,27 +133,33 @@ export default function aintaString(
  *    Throws an `Error` if a test fails
  */
 export function aintaStringTest(f) {
-    const equal = (actual, expected) => { if (actual !== expected) throw Error(
-        `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+    const e2l = e => e.stack.split('\n')[2].match(/([^\/]+\.js:\d+):\d+\)?$/)[1];
+    const equal = (actual, expected) => { if (actual === expected) return;
+        try { throw Error() } catch(err) { throw Error(`actual:\n${actual}\n` +
+            `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
 
-    // Invalid `options.enum` produces a helpful result.
-    equal(f('1', 'one', { enum:null, max:null }), // the `max` error is ignored
-        "`one` cannot be validated, `options.enum` is null not an array");
+    // Invalid `options.is` produces a helpful result.
     // @ts-expect-error
-    equal(f('2', undefined, { enum:'nope' }),
-        "A value cannot be validated, `options.enum` is type 'string' not an array");
-    equal(f('3', 'three', { enum:['0','1','2',null,'4','5'] }),
-        "`three` cannot be validated, `options.enum[3]` is null not type 'string'");
+    equal(f('2', undefined, { is:'nope' }),
+        "A value cannot be validated, `options.is` is type 'string' not an array");
+    equal(f('3', 'three', { is:['0','1','2',null,'4','5'] }),
+        "`three` cannot be validated, `options.is[3]` is null not type 'boolean:number:string'");
     // @ts-expect-error
-    equal(f('4', 'four', { enum:['0','1','2','3',['4'],5] }),
-        "`four` cannot be validated, `options.enum[4]` is an array not type 'string'");
+    equal(f('4', 'four', { is:['0','1','2','3',['4'],5] }),
+        "`four` cannot be validated, `options.is[4]` is an array not type 'boolean:number:string'");
     // @ts-expect-error
-    equal(f('5', 'five', { enum:['0','1','2','3','4',NaN] }),
-        "`five` cannot be validated, `options.enum[5]` is type 'number' not 'string'");
-    equal(f('6', 'six', { enum:[] }),
-        "`six` cannot be validated, `options.enum` is empty");
+    equal(f('5', 'five', { is:['0','1','2','3','4',BigInt('77')] }),
+        "`five` cannot be validated, `options.is[5]` is type 'bigint' not 'boolean:number:string'");
+    equal(f('6', 'six', { is:[] }),
+        "`six` cannot be validated, `options.is` is empty");
+    equal(f('6', 'six', { is:[true,false] }),
+        "`six` cannot be validated, `options.is` contains no strings");
+    equal(f('6', 'six', { is:[123,0b100] }),
+        "`six` cannot be validated, `options.is` contains no strings");
 
     // Invalid `options.max` produces a helpful result.
+    equal(f('1', 'one', { max:null }), // the `ok` error is ignored
+        "`one` cannot be validated, `options.max` is null not type 'number'");
     equal(f('1', 'one', { begin:'Max', max:null }),
         "Max: `one` cannot be validated, `options.max` is null not type 'number'");
     // @ts-expect-error
@@ -209,7 +217,7 @@ export function aintaStringTest(f) {
     equal(f('8', '', { rx:{ test:8 } }),
         "A value cannot be validated, `options.rx.test` is type 'number' not 'function'");
 
-    // Typical usage without `options.enum`, `.max`, `.min` or `.rx`.
+    // Typical usage without `options.is`, `.max`, `.min` or `.rx`.
     equal(f(''),
         false);
     equal(f(String(123), null, { begin:'String Test' }),
@@ -231,30 +239,30 @@ export function aintaStringTest(f) {
     equal(f(123, void 0, { type:'number' }),
         "A value is type 'number' not 'string'");
 
-    // Typical `options.enum` usage.
-    equal(f('b', null, { enum:['a','b','c'] }),
+    // Typical `options.is` usage.
+    equal(f('b', null, { is:['a','b','c'] }),
         false);
-    equal(f('B', null, { enum:['a','b','c'] }),
+    equal(f('B', null, { is:['a','b','c'] }),
         "A value 'B' is not in 'a:b:c'");
-    equal(f('', 'empty', { enum:['Full',''] }),
+    equal(f('', 'empty', { is:['Full',''] }),
         false);
-    equal(f(' ', 'empty', { enum:['Full',''] }),
+    equal(f(' ', 'empty', { is:['Full',''] }),
         "`empty` ' ' is not in 'Full:'");
-    equal(f('same', null, { begin:'String Test', enum:['same','same'] }),
+    equal(f('same', null, { begin:'String Test', is:['same','same'] }),
         false);
-    equal(f('but different', null, { begin:'String Test', enum:['same','same'] }),
+    equal(f('but different', null, { begin:'String Test', is:['same','same'] }),
         "String Test: A value 'but different' is not in 'same:same'");
-    equal(f('%', '0.01', { begin:'percent()', enum:['%'] }),
+    equal(f('%', '0.01', { begin:'percent()', is:['%'] }),
         false);
-    equal(f('1234567890'.repeat(5), '0.01', { begin:'percent()', enum:['1 percent'] }),
+    equal(f('1234567890'.repeat(5), '0.01', { begin:'percent()', is:['1 percent'] }),
         "percent(): `0.01` '123456789012345678901...34567890' is not in '1 percent'");
-    equal(f('too many items to log', null, { enum:Array(100).fill(0).map((_,i)=>i+'') }),
+    equal(f('too many items to log', null, { is:Array(100).fill(0).map((_,i)=>i+'') }),
         "A value 'too many items to log' is not in '0:1:2:3:4:5:6:7:8:9:1...97:98:99'");
-    equal(f('one item too long', null, { enum:['1234567890'.repeat(5)] }),
+    equal(f('one item too long', null, { is:['1234567890'.repeat(5)] }),
         "A value 'one item too long' is not in '123456789012345678901...34567890'");
-    equal(f('ascii pnc', null, { enum:[' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'] }),
+    equal(f('ascii pnc', null, { is:[' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'] }),
         "A value 'ascii pnc' is not in ' !%22#$%25&'()*+,-./:;%3C=%3E...%5D%5E_%60%7B%7C%7D~'");
-    equal(f('ñóþë', null, { enum:['⠁⠿⡀⣿','¡¦¾×ÿ'] }),
+    equal(f('ñóþë', null, { is:['⠁⠿⡀⣿','¡¦¾×ÿ'] }),
         "A value '%C3%B1%C3%B3%C3%BE%C3%AB' is not in "
         + "'%E2%A0%81%E2%A0%BF%E2%A1%80%E2%A3%BF:%C2%A1%C2%A6%C2%BE%C3%97%C3%BF'");
 
@@ -276,12 +284,12 @@ export function aintaStringTest(f) {
     equal(f('', 'is allowed,', { begin:'Non-integer', max:10e-3 }),
         false);
 
-    // Using `options.enum` and `options.max` together.
-    equal(f('abcde', null, { enum:['abc'], max:5 }),
+    // Using `options.is` and `options.max` together.
+    equal(f('abcde', null, { is:['abc'], max:5 }),
         "A value 'abcde' is not in 'abc'");
-    equal(f('abcdef', null, { enum:['abcdef'], max:5 }),
+    equal(f('abcdef', null, { is:['abcdef'], max:5 }),
         "A value 'abcdef' is not max 5");
-    equal(f('abc', null, { enum:['abc'], max:5 }),
+    equal(f('abc', null, { is:['abc'], max:5 }),
         false);
 
     // Typical `options.min` usage.
@@ -302,12 +310,12 @@ export function aintaStringTest(f) {
     equal(f('', 'empty_string,', { begin:'Min Zero', min:0 }),
         false);
 
-    // Using `options.enum` and `options.min` together.
-    equal(f('abcde', null, { enum:['abc'], min:5 }),
+    // Using `options.is` and `options.min` together.
+    equal(f('abcde', null, { is:['abc'], min:5 }),
         "A value 'abcde' is not in 'abc'");
-    equal(f('abc', null, { enum:['abc'], min:5 }),
+    equal(f('abc', null, { is:['abc'], min:5 }),
         "A value 'abc' is not min 5");
-    equal(f('abcde', null, { enum:['abcde'], min:5 }),
+    equal(f('abcde', null, { is:['abcde'], min:5 }),
         false);
 
     // Using `options.max` and `options.min` together.
@@ -318,14 +326,14 @@ export function aintaStringTest(f) {
     equal(f('abcd', null, { max:5, min:5 }),
         "A value 'abcd' is not min 5");
 
-    // Using `options.enum`, `.max` and `.min` together.
-    equal(f('abcde', null, { enum:['abcd','123456','xyz'], max:5, min:4 }),
+    // Using `options.is`, `.max` and `.min` together.
+    equal(f('abcde', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
         "A value 'abcde' is not in 'abcd:123456:xyz'");
-    equal(f('123456', null, { enum:['abcd','123456','xyz'], max:5, min:4 }),
+    equal(f('123456', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
         "A value '123456' is not max 5");
-    equal(f('xyz', null, { enum:['abcd','123456','xyz'], max:5, min:4 }),
+    equal(f('xyz', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
         "A value 'xyz' is not min 4");
-    equal(f('abcd', null, { enum:['abcd','123456','xyz'], max:5, min:4 }),
+    equal(f('abcd', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
         false);
 
     // Typical `options.rx` usage.
@@ -346,12 +354,12 @@ export function aintaStringTest(f) {
     equal(f('a', 'custom', { begin:'Not an Rx', rx:{ test:str => str === 'a'} }),
         false);
 
-    // Using `options.enum` and `options.rx` together.
-    equal(f('abc', null, { enum:['foo','bar','baz'], rx:/a/ }),
+    // Using `options.is` and `options.rx` together.
+    equal(f('abc', null, { is:['foo','bar','baz'], rx:/a/ }),
         "A value 'abc' is not in 'foo:bar:baz'");
-    equal(f('foo', null, { enum:['foo','bar','baz'], rx:/a/ }),
+    equal(f('foo', null, { is:['foo','bar','baz'], rx:/a/ }),
         "A value 'foo' fails /a/");
-    equal(f('baz', null, { enum:['foo','bar','baz'], rx:/a/ }),
+    equal(f('baz', null, { is:['foo','bar','baz'], rx:/a/ }),
         false);
 
     // Using `options.max` and `options.rx` together.
@@ -380,16 +388,16 @@ export function aintaStringTest(f) {
     equal(f('ab', null, { max:2, min:2, rx:/a/ }),
         false);
 
-    // Using `options.enum`, `.max`, `.min` and `.rx` together.
-    equal(f('abcde', null, { enum:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
+    // Using `options.is`, `.max`, `.min` and `.rx` together.
+    equal(f('abcde', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
         "A value 'abcde' is not in 'abcd:----:123456:xyz'");
-    equal(f('123456', null, { enum:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
+    equal(f('123456', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
         "A value '123456' is not max 5");
-    equal(f('xyz', null, { enum:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
+    equal(f('xyz', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
         "A value 'xyz' is not min 4");
-    equal(f('----', null, { enum:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
+    equal(f('----', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
         "A value '----' fails /^[a-z]+$/"); // @TODO maybe encode rx here
-    equal(f('abcd', null, { enum:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
+    equal(f('abcd', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
         false);
 
     // Extra `options` values cause TS errors, but do not prevent normal use.
@@ -408,11 +416,11 @@ export function aintaStringTest(f) {
     equal(f(NaN, '1%', { begin:['a','b','c'] }),
         "a,b,c: `1%` is type 'number' not 'string'");
 
-    // `options.enum`, `.max`, `.min` and `.rx` are ignored if set to `undefined`.
-    equal(f('', 'enum', { enum:void 0 }),
+    // `options.is`, `.max`, `.min` and `.rx` are ignored if set to `undefined`.
+    equal(f('', 'ok', { is:void 0 }),
         false);
-    equal(f(0, 'enum', { enum:void 0 }),
-        "`enum` is type 'number' not 'string'");
+    equal(f(0, 'ok', { is:void 0 }),
+        "`ok` is type 'number' not 'string'");
     equal(f('', 'max', { max:undefined }),
         false);
     equal(f(null, 'max', { max:undefined }),
@@ -421,9 +429,9 @@ export function aintaStringTest(f) {
         false);
     equal(f([], 'min', { min:void(0) }),
         "`min` is an array not type 'string'");
-    equal(f('', 'rx', { enum:[''], rx:({}).nope }),
+    equal(f('', 'rx', { is:[''], rx:({}).nope }),
         false);
-    equal(f('a', 'rx', { enum:[''], rx:({}).nope }),
+    equal(f('a', 'rx', { is:[''], rx:({}).nope }),
         "`rx` 'a' is not in ''");
 
     // Invalid `options.type` is a TS error, but does not prevent normal use.

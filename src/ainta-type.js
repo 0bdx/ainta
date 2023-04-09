@@ -19,7 +19,7 @@ import {
     QS,
     quote,
     sanitise,
-    validateArrayOfStringsOption
+    validateArrayOfTypesOption
 } from './helpers.js';
 import emptyOptions from './options.js';
 
@@ -78,7 +78,7 @@ export default function aintaType(
     const optionsTypeExists = TYPE in options;
     const optionsTypeIsArray = optionsTypeExists && isArray(optionsType);
     if (optionsTypeExists && optionsTypeIsArray) {
-        const result = validateArrayOfStringsOption(TYPE, optionsType, true, true);
+        const result = validateArrayOfTypesOption(TYPE, optionsType, true);
         if (result) return prefix + result;
     } else {
         const result = !optionsTypeExists

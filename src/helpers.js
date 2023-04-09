@@ -104,6 +104,9 @@ export const QO = quote(OBJECT);
 /** @constant {string} QS The literal string "'string'" */
 export const QS = quote(STRING);
 
+/** @constant {string} QS The literal string "'boolean:number:string'" */
+export const QBNS = quote(BOOLEAN + ':' + NUMBER + ':' + STRING);
+
 /**
  * ### Truncates text to 32 characters, and then uri-encodes it.
  * @private
@@ -144,43 +147,50 @@ export const stringifyTypes = types => quote(
         .join(':'));
 
 /**
- * ### Validates an option which should be an array of strings.
+ * ### Validates an option which should be an array of scalars.
  * @private
  * 
+ * A 'scalar', in this context, is a boolean, number or string.
+ * 
+ * @TODO maybe add BigInt, null and Symbol
+ * 
  * @param {string} key
- *    The name of the option to validate, eg "enum".
+ *    The name of the option to validate, eg "isnt".
  * @param {any} val
- *    The value of the option, which must be an array of strings to be valid.
+ *    The value of the option, which must be an array of scalars to be valid.
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
- * @param {boolean} [allTypes]
- *    An optional flag which, if `true`, means strings must all be types.
+ * @param {'boolean'|'number'|'string'} mustContain
+ *    The array must contain at least one item of this type to be valid..
  * @returns {undefined|string}
- *    Returns undefined if `val` is valid, or an explanation if not.
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
-export const validateArrayOfStringsOption = (key, val, has, allTypes) => {
+export const validateArrayOfScalarsOption = (key, val, has, mustContain) => {
     if (has) {
         const result = val === null
             ? IS_NULL + _NOT_AN_ARRAY
             : !isArray(val)
                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : !allTypes && !val.length
-                    ? 'is empty' // eg for `options.enum`
+                : !val.length
+                    ? 'is empty' // eg for `options.not`
                     : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
+        let doesContain = false;
         for (let i=0, l=val.length; i<l; i++) {
             const item = val[i];
+            const type = typeof item;
             const result = item === null
-            ? IS_NULL + _NOT_TYPE_ + QS
-            : isArray(item)
-                ? IS_AN_ARRAY + _NOT_TYPE_ + QS
-                : typeof item !== STRING
-                    ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
-                    : allTypes && !isRecognisedType(item)
-                        ? saq(item) + _NOT_ + 'known'
+                ? IS_NULL + _NOT_TYPE_ + QBNS
+                : isArray(item)
+                    ? IS_AN_ARRAY + _NOT_TYPE_ + QBNS
+                    : type !== BOOLEAN && type !== NUMBER && type !== STRING
+                        ? IS_TYPE_ + quote(type) + _NOT_ + QBNS
                         : '';
             if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+            if (type === mustContain) doesContain = true;
         }
+        if (!doesContain)
+            return CANNOT_OPTIONS + key + '` contains no ' + mustContain + 's';
     }
 };
 
@@ -195,7 +205,7 @@ export const validateArrayOfStringsOption = (key, val, has, allTypes) => {
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  * @returns {undefined|string}
- *    Returns undefined if `val` is valid, or an explanation if not.
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
 export const validateBooleanOption = (key, val, has) => {
     if (has) {
@@ -225,7 +235,7 @@ export const validateBooleanOption = (key, val, has) => {
  * @param {boolean} [notNegative]
  *    An optional flag which, if set to `true`, prevents `val` from being -ve.
  * @returns {undefined|string}
- *    Returns undefined if `val` is valid, or an explanation if not.
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
 export const validateNumericOption = (key, val, has, notZero, notNegative) => {
     if (has) {
@@ -361,4 +371,47 @@ export const validateSchemaOption = (schema, has) => {
             if (result) return CANNOT_OPTIONS + 'schema.' + propertyName + result;
         }
     }    
+};
+
+/**
+ * ### Validates an option which should be an array of types.
+ * @private
+ * 
+ * A 'type', in this context, is one of the strings that JavaScript's `typeof`
+ * can produce, like `"boolean"` or `"undefined"`.
+ * 
+ * @param {string} key
+ *    The name of the option to validate, eg "types".
+ * @param {any} val
+ *    The value of the option, which must be an array of types to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
+ */
+export const validateArrayOfTypesOption = (key, val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_AN_ARRAY
+            : !isArray(val)
+                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+                : '';
+                // : !allTypes && !val.length
+                //     ? 'is empty' // eg for `options.not`
+                //     : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+        for (let i=0, l=val.length; i<l; i++) {
+            const item = val[i];
+            const result = item === null
+                ? IS_NULL + _NOT_TYPE_ + QS
+                : isArray(item)
+                    ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                    : typeof item !== STRING
+                        ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
+                        : !isRecognisedType(item)
+                            ? saq(item) + _NOT_ + 'known'
+                            : '';
+            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+        }
+    }
 };

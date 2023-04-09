@@ -36,7 +36,7 @@ import {
     quote,
     sanitise,
     saq,
-    validateArrayOfStringsOption,
+    validateArrayOfTypesOption,
     validateBooleanOption,
     validateNumericOption,
     validateRxishOption,
@@ -126,7 +126,7 @@ export default function aintaDictionary(
      || validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
-     || validateArrayOfStringsOption(TYPES, optionsTypes, hasTypes, true)
+     || validateArrayOfTypesOption(TYPES, optionsTypes, hasTypes)
 
     // If `options.least` and `options.most` are both being used, but `least` is
     // more than `most`, return a helpful result.
