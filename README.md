@@ -2,7 +2,7 @@
 
 __Utilities for validating values in 0bdx apps, libraries and websites.__
 
-∅&nbsp; __Version:__ 0.0.15  
+∅&nbsp; __Version:__ 0.0.16  
 ∅&nbsp; __NPM:__ <https://www.npmjs.com/package/@0bdx/ainta>  
 ∅&nbsp; __Repo:__ <https://github.com/0bdx/ainta>  
 ∅&nbsp; __Homepage:__ <https://0bdx.com/ainta>

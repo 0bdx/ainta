@@ -1,3 +1,4 @@
+import aintaFunction from './ainta-function.js';
 import aintaNumber from './ainta-number.js';
 import aintaObject from './ainta-object.js';
 import aintaString from './ainta-string.js';
@@ -317,6 +318,7 @@ export const validateAgainstSchema = (ooc, options, hasSchema, unidentified, ide
                     ? identifier + '.' + key
                     : key + _OF_ + unidentified
                 const ainta = {
+                    function: aintaFunction, // @TODO write unit tests
                     number: aintaNumber, // @TODO write unit tests
                     object: aintaObject, // @TODO recursive! write unit tests
                     string: aintaString, // @TODO write unit tests

@@ -1,6 +1,6 @@
 /**
  * https://www.npmjs.com/package/@0bdx/ainta
- * @version 0.0.15
+ * @version 0.0.16
  * @license Copyright (c) 2023 0bdx <0@0bdx.com> (0bdx.com)
  * SPDX-License-Identifier: MIT
  */
@@ -842,6 +842,7 @@ const validateAgainstSchema = (ooc, options, hasSchema, unidentified, identifier
                     ? identifier + '.' + key
                     : key + _OF_ + unidentified;
                 const ainta = {
+                    function: aintaFunction, // @TODO write unit tests
                     number: aintaNumber, // @TODO write unit tests
                     object: aintaObject, // @TODO recursive! write unit tests
                     string: aintaString, // @TODO write unit tests

@@ -277,6 +277,31 @@ export function aintaObjectTest(f) {
     equal(f({ extra:99, a:123 }, '', { open:true, schema }),
         "`a of an object` is type 'number', not the `options.types` 'undefined'");
 
+    // `options.schema` - instance example.
+    class TestClassWith {
+        constructor() { this.b = {} }
+        doThings() {}
+        a = true;
+    }
+    const testInstWith = new TestClassWith();
+    schema = { a:{ types:['boolean'] }, b:{ types:['object'] }, doThings: { types:['function'] } };
+    equal(f(testInstWith, 'testInstWith', { begin:'schema expects doThings()', open:false, schema }),
+        false);
+    schema = { a:{ types:['boolean'] }, b:{ types:['object'] } }; // @TODO maybe testInstWith should be invalid
+    equal(f(testInstWith, 'testInstWith', { begin:'schema does not expect doThings()', open:false, schema }),
+        false);
+    class TestClassWithout {
+        constructor() { this.b = {} }
+        a = true;
+    }
+    const testInstWithout = new TestClassWithout();
+    schema = { a:{ types:['boolean'] }, b:{ types:['object'] }, doThings: { types:['function'] } };
+    equal(f(testInstWithout, 'testInstWithout', { begin:'schema expects doThings()', open:false, schema }),
+        "schema expects doThings(): `testInstWithout.doThings` is type 'undefined', not the `options.types` 'function'");
+    schema = { a:{ types:['boolean'] }, b:{ types:['object'] } };
+    equal(f(testInstWithout, 'testInstWithout', { begin:'schema does not expect doThings()', open:false, schema }),
+        false);
+
     // `options.schema` - both properties must exist and be non-arrays of one type.
     schema = { a:{ types:['boolean'] }, b:{ types:['object'] } };
     equal(f({}, 'obj', { begin:'Must exist', schema }),
