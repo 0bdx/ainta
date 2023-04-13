@@ -1,5 +1,3 @@
-import aintaNumber from './ainta-number.js';
-import aintaString from './ainta-string.js';
 import {
     _BT_OPTIONS_DOT,
     _IS_NOT_,
@@ -8,26 +6,19 @@ import {
     _NOT_AN_ARRAY,
     _NOT_TYPE_,
     _OF_,
-    AN_ARRAY,
     AN_OBJECT,
-    IS_,
     IS_AN_ARRAY,
     IS_NULL,
     IS_TYPE_,
-    NULL,
     OBJECT,
-    ONE,
     OPEN,
-    THE_BT_OPT_TYPES_BT_,
-    TYPE_,
-    UNDEFINED,
 } from './constants.js';
 import {
     buildResultPrefix,
     isArray,
     QO,
     quote,
-    stringifyTypes,
+    validateAgainstSchema,
     validateBooleanOption,
     validateSchemaOption,
 } from './helpers.js';
@@ -40,7 +31,8 @@ import emptyOptions from './options.js';
  * a short explanation of what went wrong.
  *
  * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong.
+ * explanation of what went wrong. `options.open` determines whether properties
+ * not in `.schema` are allowed.
  * 
  * Otherwise, `aintaObject()` returns `false`.
  * 
@@ -68,7 +60,8 @@ import emptyOptions from './options.js';
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {import('./options').Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    `options.open` determines whether properties not in `.schema` are allowed.
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -104,204 +97,7 @@ export default function aintaObject(
         ? buildResultPrefix(options.begin, identifier, 'An object ') + result
 
         // Otherwise, check that the object conforms to `options.schema` if set.
-        : validateAgainstSchema(value, options, hasSchema, identifier);
-}
-
-/**
- * Checks that an object `obj` confirms to a given schema.
- * 
- * @TODO refactor, it's too long and repetitive
- *
- * @param {object} obj
- *    The object to validate.
- * @param {import('./options').Options} options
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
- * @param {boolean} hasSchema
- *    `true` if `options.schema` is present.
- * @param {string} identifier
- *    Optional name to call `obj` in the explanation, if invalid.
- * @return {false|string}
- *    Returns `false` if `obj` conforms, or an explanation if not.
- */
-function validateAgainstSchema(obj, options, hasSchema, identifier) {
-    const { begin, open, schema } = options;
-
-    // Step through each property in the `schema` object.
-    let result;
-    if (hasSchema) {
-        for (const key in schema) {
-            const { types } = schema[key];
-            const val = obj[key]; // could be undefined
-            const type = typeof val;
-
-            // If `options.types` exists, create `typedArrays` - a shallow copy
-            // of `options.types` without the top-level strings.
-            // So `[ "boolean", ["string"], "symbol", ["number","bigint"] ]`
-            // becomes `[ ["string"], ["number","bigint"] ]`.
-            const typedArrays = types && types.filter(isArray);
-
-            // If no types are defined, the property can be any type but must exist.
-            // @TODO still reject NaN, null and [], and write unit tests
-            // @TODO still apply other options, and write unit tests
-            if (!types || !types.length) {
-                if (type === UNDEFINED) {
-                    result = [key, IS_ + 'missing'];
-                    break;
-                }
-
-            // Otherwise, if `options.types` contains at least one array, and if
-            // `val` is an array, and if one of its item's types is not included
-            // in `schema.types`, return an explanation of the problem.
-            } else if (typedArrays.length && isArray(val)) {
-
-                // If one of the 'typed arrays' is empty, it means that anything
-                // goes. `val` must be valid, so skip to the next `key`.
-                // @TODO still reject NaN, null and [], and write unit tests
-                // @TODO still apply other options, and write unit tests
-                for (const typedArray of typedArrays)
-                    if (typedArray.length === 0) continue;
-
-                // Define three variables which will be used inside the
-                // `validateValue` loop, but also used afterwards.
-                const valLen = val.length;
-                let i = 0;
-                let item;
-
-                // Step through each 'typed array', and validate the value
-                // against each one in turn.
-                let validTypedArray = false;
-                validateValue: for (const typedArray of typedArrays) {
-
-                    // Step through each item in the value, to check whether
-                    // the current 'typed array' can validate it.
-                    i = 0; // IMPORTANT: no `let`, `i` must stay in upper scope
-                    for (; i<valLen; i++) {
-                        item = val[i]; // IMPORTANT: no `const`, `item` must stay in upper scope
-
-                        // Step through each type-string in the current 'typed array'.
-                        let validItem = false;
-                        for (let j=0, len=typedArray.length; j<len; j++) {
-                            if (typeof item === typedArray[j]) {
-                                validItem = true;
-                                break;
-                            }
-                        }
-
-                        // If the current 'typed array' could not validate the
-                        // item, try the next 'typed array'.
-                        if (!validItem) continue validateValue;
-                    }
-
-                    // Every item in the value has validated against the current
-                    // 'typed array', so skip to the next `key`.
-                    validTypedArray = true;
-                    break validateValue;
-                }
-
-                // If `validTypedArray` has not been set to `true`, `val` could
-                // not be validated against any of the 'typed arrays', so write
-                // an explanation, and break out of the top-level loop.
-                if (!validTypedArray) {
-                    const itemType = typeof item;
-                    result = [`${key}[${i}]`, IS_ + (
-                        item === null
-                            ? NULL
-                            : isArray(item)
-                                ? AN_ARRAY
-                                : TYPE_ + quote(itemType)
-                        ) + ',' + _NOT_ + (
-                            typedArrays.length === 1
-                                ? THE_BT_OPT_TYPES_BT_
-                                : ONE + _OF_ + THE_BT_OPT_TYPES_BT_
-                        ) + stringifyTypes(types)
-                    ];
-                    break;
-                }
-
-                // `val` is an array, and its basic type is included in
-                // `schema.types`, but it may still be have invalid items.
-                // @TODO check that `most` and `least` (in which schema?) are followed
-                const valIdentifier = identifier
-                    ? identifier + '.' + key
-                    : key + _OF_ + AN_OBJECT            
-                for (let i=0; i<valLen; i++) {
-                    const item = val[i];
-                    const ainta = {
-                        number: aintaNumber, // @TODO write unit tests
-                        object: aintaObject, // @TODO recursive! write unit tests
-                        string: aintaString, // @TODO write unit tests
-                    }[typeof item];
-                    if (ainta) {
-                        const result = ainta(
-                            item,
-                            `${valIdentifier}[${i}]`,
-                            { begin:options.begin, ...schema[key] },
-                        );
-                        if (result) return result;
-                    }
-                }
-
-            // `val` is not an array. If its type is not included in `schema.types`,
-            // return an explanation of the problem.
-            // Note that `indexOf()` will ignore any 'typed arrays' in the schema.
-            } else if (types.indexOf(type) === -1) {
-                result = [key, IS_ + (
-                    val === null
-                        ? NULL
-                        : isArray(val)
-                            ? AN_ARRAY
-                            : TYPE_ + quote(type)
-                    ) + ',' + _NOT_ + (
-                        types.length === 1
-                            ? THE_BT_OPT_TYPES_BT_
-                            : ONE + _OF_ + THE_BT_OPT_TYPES_BT_
-                    ) + stringifyTypes(types)
-                ];
-                break;
-
-            // `val` is not an array, and its basic type is included in
-            // `schema.types`, but it may still be invalid.
-            } else {
-                const valIdentifier = identifier
-                    ? identifier + '.' + key
-                    : key + _OF_ + AN_OBJECT
-                const ainta = {
-                    number: aintaNumber, // @TODO write unit tests
-                    object: aintaObject, // @TODO recursive! write unit tests
-                    string: aintaString, // @TODO write unit tests
-            }[type];
-                if (ainta) {
-                    const result = ainta(
-                        val,
-                        valIdentifier,
-                        { begin:options.begin, ...schema[key] },
-                    );
-                    if (result) return result;
-                }
-            }
-
-            // @TODO write full unit tests for nested schemas
-        }
-    }
-
-    // If `options.open` is `false` and the object contains a property which has
-    // no schema key, return an explanation of the problem.
-    if (!open) {
-        for (const key in obj) {
-            if (!schema || !schema[key]) {
-                result = [key, 'is unexpected'];
-                break;
-            }
-        }
-    }
-
-    return result ? buildResultPrefix(
-            begin,
-            identifier && identifier + '.' + result[0],
-            '`' + result[0] + _OF_ + AN_OBJECT + '` '
-        ) + result[1]
-        : false
-    ;
+        : validateAgainstSchema(value, options, hasSchema, AN_OBJECT, identifier);
 }
 
 /**

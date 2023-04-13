@@ -1,3 +1,4 @@
+import aintaFunction from './ainta-function.js';
 import aintaNumber from './ainta-number.js';
 import aintaObject from './ainta-object.js';
 import aintaString from './ainta-string.js';
@@ -205,6 +206,10 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
                 : key + _OF_ + A_DICTIONARY
             let result;
             switch (type) {
+                case FUNCTION:
+                    result = aintaFunction(value, valueIdentifier, options);
+                    if (result) return result;
+                    break;
                 case NUMBER:
                     result = aintaNumber(value, valueIdentifier, options);
                     if (result) return result;
@@ -237,8 +242,10 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
  *    Throws an `Error` if a test fails
  */
 export function aintaDictionaryTest(f) {
-    const equal = (actual, expected) => { if (actual !== expected) throw Error(
-        `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+    const e2l = e => (e.stack.split('\n')[2].match(/([^\/]+\.js:\d+):\d+\)?$/)||[])[1];
+    const equal = (actual, expected) => { if (actual === expected) return;
+        try { throw Error() } catch(err) { throw Error(`actual:\n${actual}\n` +
+            `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
 
     // Invalid `options.key` produces a helpful result.
     equal(f({a:1}, 'one', { begin:'Least', key:null }),
@@ -412,6 +419,7 @@ export function aintaDictionaryTest(f) {
 
     // Using `options.pass` to validate a dictionary of objects with a schema.
     // @TODO output better wording than `C of a dictionary.a`
+    // @TODO differentiate wording from aintaFunction()
     equal(f({A:{a:0},B:{a:1},C:{a:'2'},D:{a:3}}, '', { begin:'obj.a is a number',
         pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
         "obj.a is a number: `C of a dictionary.a` is type 'string', not the `options.types` 'number'");
@@ -422,7 +430,19 @@ export function aintaDictionaryTest(f) {
         pass:false, schema:{ a:{ types:['number']} }, types:['object'] }),
         false);
 
-    // Basic `options.schema` usage - properties can be any type.
+    // Using `options.pass` to validate a dictionary of classes with a schema.
+    // @TODO output better wording than `C of a dictionary.a`
+    // @TODO differentiate wording from aintaObject()
+    equal(f({A:class A{static a=0},B:class{static a=1},C:class{static a='2'},D:class{static a=3}},
+        '', { begin:'obj.a is a number',
+        pass:true, schema:{ a:{ types:['number']} }, types:['function'] }),
+        "obj.a is a number: `C of a dictionary.a` is type 'string', not the `options.types` 'number'");
+    equal(f({A:class A{static a=0},B:class{static a=1},C:class{static a='2'},D:class{static a=3}},
+        '', { begin:'pass is false',
+        pass:false, schema:{ a:{ types:['number']} }, types:['function'] }),
+        false);
+
+    // Basic `options.types` usage - properties can be any type.
     const everyType = {a:{},b:null,c:[],d:Math,e:/a/,f:()=>0,g:1,h:NaN,i:'a',j:false,k:void 0,l:BigInt(1),m:Symbol('a')};
     equal(f(everyType, 'everyType', { begin:'Anything goes', types:[] }),
         false);

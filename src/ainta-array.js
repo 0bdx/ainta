@@ -1,3 +1,4 @@
+import aintaFunction from './ainta-function.js';
 import aintaNumber from './ainta-number.js';
 import aintaObject from './ainta-object.js';
 import aintaString from './ainta-string.js';
@@ -24,6 +25,7 @@ import {
     THE_BT_OPT_TYPES_BT_,
     TYPE_,
     TYPES,
+    FUNCTION,
 } from './constants.js';
 import {
     buildResultPrefix,
@@ -188,6 +190,10 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
                 : SQI + _OF_ + AN_ARRAY
             let result;
             switch (type) {
+                case FUNCTION:
+                    result = aintaFunction(item, itemIdentifier, options);
+                    if (result) return result;
+                    break;
                 case NUMBER:
                     result = aintaNumber(item, itemIdentifier, options);
                     if (result) return result;
@@ -220,8 +226,10 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
  *    Throws an `Error` if a test fails
  */
 export function aintaArrayTest(f) {
-    const equal = (actual, expected) => { if (actual !== expected) throw Error(
-        `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+    const e2l = e => (e.stack.split('\n')[2].match(/([^\/]+\.js:\d+):\d+\)?$/)||[])[1];
+    const equal = (actual, expected) => { if (actual === expected) return;
+        try { throw Error() } catch(err) { throw Error(`actual:\n${actual}\n` +
+            `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
 
     // Invalid `options.least` produces a helpful result.
     equal(f([1], 'one', { begin:'Least', least:null }),
@@ -423,6 +431,7 @@ export function aintaArrayTest(f) {
 
     // Using `options.pass` to validate an array of objects with a schema.
     // @TODO output better wording than `[2] of an array.a`
+    // @TODO differentiate wording from aintaFunction()
     equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'obj.a is a number',
         pass:true, schema:{ a:{ types:['number']} }, types:['object'] }),
         "obj.a is a number: `[2] of an array.a` is type 'string', not the `options.types` 'number'");
@@ -434,6 +443,26 @@ export function aintaArrayTest(f) {
         "The null is not allowed: `[3] of an array` is null, not a regular object");
     equal(f([{a:0},{a:1},{a:'2'},{a:3}], '', { begin:'pass is false',
         pass:false, schema:{ a:{ types:['number']} }, types:['object'] }),
+        false);
+
+    // Using `options.pass` to validate an array of classes with a schema.
+    // @TODO output better wording than `[2] of an array.a`
+    // @TODO differentiate wording from aintaObject()
+    equal(f([class{static a=0},class{static a=1},class{static a='2'},class{static a=3}],
+        '', { begin:'obj.a is a number',
+        pass:true, schema:{ a:{ types:['number']} }, types:['function'] }),
+        "obj.a is a number: `[2] of an array.a` is type 'string', not the `options.types` 'number'");
+    equal(f([class{static a=0},[],class{static a=1},class{static a=2},null,class{static a=3}],
+            '', { begin:'The array is not allowed',
+        pass:true, schema:{ a:{ types:['number']} }, types:['function'] }),
+        "The array is not allowed: `[1] of an array` is an array, not the `options.types` 'function'");
+    equal(f([class{static a=0},class{static a=1},{a:'2'},class{static a=3}],
+        '', { begin:'pass is false',
+        pass:false, schema:{ a:{ types:['number']} }, types:['function'] }),
+        "pass is false: `[2] of an array` is type 'object', not the `options.types` 'function'");
+    equal(f([class{static a=0},class{static a=1},{a:'2'},class{static a=3}],
+        '', { begin:'pass is false',
+        pass:false, schema:{ a:{ types:['number']} }, types:['function','object'] }),
         false);
 
     // Extra `options` values cause TS errors, but do not prevent normal use.

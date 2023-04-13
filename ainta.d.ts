@@ -252,10 +252,19 @@ export function aintaBoolean(value: any, identifier?: string, options?: Options)
  */
 export function aintaDictionary(value: any, identifier?: string, options?: Options): false | string;
 /**
- * ### Validates a function.
+ * ### Validates a function or class.
  *
- * If the first argument passed to `aintaFunction()` ain't a function, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * If the first argument passed to `aintaFunction()` ain't a function or class,
+ * it returns a short explanation of what went wrong.
+ *
+ * Else, if `options.schema` is set, but the function (assumed to be a class)
+ * does not conform to that schema, an explanation is returned. `options.open`
+ * determines whether static members not in `.schema` are allowed.
+ *
+ * Otherwise, `aintaFunction()` returns `false`.
+ *
+ * @TODO discuss static vs instance methods and properties
+ * @TODO figure out best way to validate instance methods and properties
  *
  * @example
  * import { aintaFunction } from '@0bdx/ainta';
@@ -269,12 +278,19 @@ export function aintaDictionary(value: any, identifier?: string, options?: Optio
  * aintaFunction(null, 'callback', { begin:'runCallback()' });
  * // "runCallback(): `callback` is null not type 'function'"
  *
+ * aintaObject(class{ static staticNum = 123 }, 'Anon', { open:true });
+ * // false
+ *
+ * aintaFunction(class{}, 'Anon', { schema:{ staticNum:{ types:['number']} } });
+ * // "`Anon.staticNum` is missing"
+ *
  * @param {any} value
  *    The value to validate.
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
  *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    `options.open` determines whether properties not in `.schema` are allowed.
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */
@@ -355,7 +371,8 @@ export function aintaNumber(value: any, identifier?: string, options?: Options):
  * a short explanation of what went wrong.
  *
  * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong.
+ * explanation of what went wrong. `options.open` determines whether properties
+ * not in `.schema` are allowed.
  *
  * Otherwise, `aintaObject()` returns `false`.
  *
@@ -383,7 +400,8 @@ export function aintaNumber(value: any, identifier?: string, options?: Options):
  * @param {string} [identifier]
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    `options.open` determines whether properties not in `.schema` are allowed.
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
  */

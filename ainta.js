@@ -90,6 +90,9 @@ const AN_ = 'an ';
 /** @constant {string} AN_ARRAY The literal string "an array" */
 const AN_ARRAY = AN_ + ARRAY;
 
+/** @constant {string} A_CLASS The literal string "a class" */
+const A_CLASS = 'a class';
+
 /** @constant {string} A_DICTIONARY The literal string "a dictionary" */
 const A_DICTIONARY = 'a dictionary';
 
@@ -155,6 +158,400 @@ const _NOT_A_REGULAR_ = _NOT_ + 'a regular ';
 
 /** @constant {string} _NOT_TYPE_ The literal string " not type " */
 const _NOT_TYPE_ = _NOT_ + TYPE_;
+
+/**
+ * ### The string name of a JavaScript type, eg `"boolean"` or `"undefined"`.
+ * 
+ * This is the complete set of possible values that JavaScript's built in
+ * `typeof` is able to produce.
+ * 
+ * `typeof` has a few surprises up its sleeve. For example, `null` is "object"
+ * and `NaN` is "number".
+ *
+ * @typedef {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} TypeOf
+ */
+
+/**
+ * ### Describes the types an array can contain, eg `["object"]`.
+ * 
+ * - `["bigint","number"]` describes an array containing only numeric values
+ * - `["boolean"]` describes an array containing only `true` and `false`
+ * - `["string","undefined"]` can contain strings, `undefined` and 'empty slots'
+ * - `[]` means an array which can contain any value
+ *
+ * @typedef {TypeOf[]} TypesOf
+ */
+
+/**
+ * ### One type, or an array of certain types, eg `"number"` or `["string"]`.
+ *
+ * @typedef {TypeOf|TypesOf} TypeOrTypesOf
+ */
+
+// /**
+//  * ### Extends JavaScript types, adding useful extras like "any" and "null".
+//  *
+//  * @typedef {TypeOf|'any'|'array'|'nan'|'null'} Kind
+//  */
+
+/**
+ * ### A configuration object, used by all `ainta` functions.
+ * 
+ * Each option is actually optional, so an empty object `{}` is perfectly valid.
+ * 
+ * Different options are used by different `ainta` functions. For example:
+ * - `options.before` is used all the `ainta` functions
+ * - `options.gte` is only used by `aintaNumber()`
+ * - `options.is` is used by `aintaBoolean()`, `aintaNumber()` and
+ *   `aintaString()`.
+ *
+ * @typedef {object} Options
+ * @property {string} [begin]
+ *    Optional text to begin the result with, eg a function name like "isOk()".
+ * @property {number} [gte]
+ *    Optional minimum value. Short for 'Greater Than or Equal'.
+ * @property {(boolean|number|string)[]} [is]
+ *    Optional array of valid values.
+ * @property {(boolean|number|string)[]} [isnt]
+ *    Optional array of invalid values.
+ * @property {Rxish} [key]
+ *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+ * @property {number} [least]
+ *    Optional minimum length of an array.
+ * @property {number} [lte]
+ *    Optional maximum value. Short for 'Less Than or Equal'.
+ * @property {number} [max]
+ *    Optional maximum length of a string.
+ * @property {number} [min]
+ *    Optional minimum length of a string.
+ * @property {number} [mod]
+ *    Optional modulo which `value` must divide into without a remainder.
+ * @property {number} [most]
+ *    Optional maximum length of an array.
+ * @property {boolean} [open]
+ *    Optional flag. If true, an object can contain 'extra' properties -
+ *    that is, key/value pairs not described in `options.schema`.
+ * @property {boolean} [pass]
+ *    Optional flag. If true, array items are validated using `options`.
+ * @property {Rxish} [rx]
+ *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
+ * @property {string} [split]
+ *    Optional string which tells `aintaList()` how to turn strings into arrays.
+ * @property {Schema} [schema]
+ *    Optional object which describes an object.
+ * @property {TypeOrTypesOf} [type]
+ *    Optional JavaScript type to expect, eg "number", ["object"] or "undefined".
+ * @property {TypeOrTypesOf[]} [types]
+ *    Optional array of JS types to expect, eg ["boolean"] for `true` or `false`
+ *    or [["bigint","number"],"undefined"] for an optional array of numerics.  
+ *    If missing, the property is allowed to be any type.
+ */
+
+/**
+ * ### An object with a `test()` function. Typically a JavaScript `RegExp`.
+ * 
+ * @typedef {object} Rxish
+ * @property {function(string):boolean} test
+ *    The test function, which takes a string and returns `true` if it passes
+ *    and `false` if it fails.
+ */
+
+/**
+ * ### An object which describes an object's properties.
+ * 
+ * @typedef {Object.<string, Options>} Schema
+ */
+
+/**
+ * ### An empty object with the `Options` type, used by all `ainta` functions.
+ * 
+ * Using an empty `{}` is really a way to export the `Options` type, and avoid a
+ * "File '.../ainta/src/options.js' is not a module. ts(2306)" error.
+ * 
+ * @type Options
+ */
+const emptyOptions = {};
+
+/**
+ * ### Validates a number.
+ *
+ * If the first argument passed to `aintaNumber()` ain't a number, it returns
+ * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.is` - if set, this is an array containing valid numbers
+ * - `options.lte` - if set, the value must be Less Than or Equal to this
+ * - `options.mod` - if set, the value must be divisible by this
+ * 
+ * Otherwise, `aintaNumber()` returns `false`.
+ * 
+ * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
+ * doesn't consider `NaN` to be a number.
+ *
+ * @example
+ * import { aintaNumber } from '@0bdx/ainta';
+ * 
+ * aintaNumber(-Infinity);
+ * // false
+ *
+ * aintaNumber(NaN);
+ * // "A value is the special `NaN` value"
+ *
+ * aintaNumber('99', 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'string' not 'number'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if any of the `options` it uses are invalid.
+ */
+function aintaNumber(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Use aintaType() to check whether `typeof value` is 'number'.
+    // If not, bail out right away.
+    let result = aintaType(value, identifier, { ...options, type:NUMBER });
+    if (result) return result;
+
+    // If `options.gte`, `.is` `.lte` or `.mod` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ gte:undefined }` acts the same way as `{}`, which
+    // is why we use `options.gte !== void 0` instead of `"gte" in options`.
+    const optionsGte = options.gte;
+    const hasGte = optionsGte !== void 0;
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
+    const optionsLte = options.lte;
+    const hasLte = optionsLte !== void 0;
+    const optionsMod = options.mod;
+    const hasMod = optionsMod !== void 0;
+    result =
+        validateNumericOption(GTE, optionsGte, hasGte)
+     || validateArrayOfScalarsOption(IS, optionsIs, hasIs, NUMBER)
+     || validateNumericOption(LTE, optionsLte, hasLte)
+     || validateNumericOption(MOD, optionsMod, hasMod, true)
+
+    // If `options.gte` and `options.lte` are both being used, but `gte` is
+    // greater than `lte`, return a helpful result.
+     || (hasGte && hasLte && optionsGte > optionsLte
+        ? CANNOT_OPTIONS + 'gte` > `options.lte`'
+
+        // `aintaNumber()` differs from `aintaType(..., { type:'number' })`,
+        // in that it doesn't consider `NaN` to be a number. At this point,
+        // `typeof value` is 'number' but it could be `NaN`, so use `isNaN()`
+        // to check. Note that `Number.isNaN()` is not necessary in this case.
+        : isNaN(value)
+            ? IS_NAN + _NOT_A_REGULAR_ + NUMBER
+
+            // Check that `value` exists in the `options.is` array, if set.
+            : hasIs && optionsIs.indexOf(value) == -1
+                ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+
+                // Compare `value` with the 'Greater Than or Equal' option, if set.
+                : hasGte && optionsGte > value
+                    ? value + _IS_NOT_ + GTE + ' ' + optionsGte
+
+                    // Compare `value` with the 'Less Than or Equal' option, if set.
+                    : hasLte && optionsLte < value
+                        ? value + _IS_NOT_ + LTE + ' ' + optionsLte
+
+                        // Test if `value` divides by the modulo option, if set.
+                        : hasMod && (value % optionsMod)
+                            ? value + ' is not divisible by ' + optionsMod
+                            : ''
+    );
+
+    return result
+        ? buildResultPrefix(options.begin, identifier) + result
+        : false;
+}
+
+/**
+ * ### Validates that a value is a regular JavaScript object.
+ *
+ * If the first argument passed to `aintaObject()` ain't an object, it returns
+ * a short explanation of what went wrong.
+ *
+ * Else, if the object does not conform to `options.schema`, it also returns an
+ * explanation of what went wrong. `options.open` determines whether properties
+ * not in `.schema` are allowed.
+ * 
+ * Otherwise, `aintaObject()` returns `false`.
+ * 
+ * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
+ * doesn't consider `null` or an array to be an object.
+ * 
+ * @example
+ * import { aintaObject } from '@0bdx/ainta';
+ * 
+ * aintaObject({ red:0xFF0000 }, 'palette', { open:true });
+ * // false
+ *
+ * aintaObject([]);
+ * // "A value is an array not type 'object'"
+ *
+ * aintaObject(null, 'lookup', { begin:'processLookup()' });
+ * // "processLookup(): `lookup` is null not an object"
+ *
+ * const schema = { red: { rx:/^#[a-f0-9]{6}$/i, types:['string'] } };
+ * aintaObject({ red:0xFF0000 }, 'palette', { schema });
+ * // "`palette.red` is type 'number' not 'string'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    `options.open` determines whether properties not in `.schema` are allowed.
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ */
+function aintaObject(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Check that `value` is a regular JavaScript object. If not, bail out.
+    let result = value === null
+        ? IS_NULL + _NOT_A_REGULAR_ + OBJECT
+        : isArray(value)
+            ? IS_AN_ARRAY + _NOT_A_REGULAR_ + OBJECT
+            : typeof value !== OBJECT
+                ? IS_TYPE_ + quote(typeof value) + _NOT_ + QO
+                : ''
+    ;
+    if (result) return buildResultPrefix(options.begin, identifier) + result;
+
+    // If `options.open` or `.schema` are invalid, return a helpful result. Note
+    // that setting these to `undefined` may be useful in some cases, so that
+    // `{ schema:undefined }` acts the same way as `{}`, which is why we use
+    // `options.schema !== void 0` instead of `"schema" in options`.
+    const optionsOpen = options.open;
+    const hasOpen = optionsOpen !== void 0;
+    const optionsSchema = options.schema;
+    const hasSchema = optionsSchema !== void 0;
+    result = validateBooleanOption(OPEN, optionsOpen, hasOpen)
+     || validateSchemaOption(optionsSchema, hasSchema);
+
+    // If the validation above has failed, return an explanation.
+    return result
+        ? buildResultPrefix(options.begin, identifier, 'An object ') + result
+
+        // Otherwise, check that the object conforms to `options.schema` if set.
+        : validateAgainstSchema(value, options, hasSchema, AN_OBJECT, identifier);
+}
+
+/**
+ * ### Validates a string.
+ *
+ * If the first argument passed to `aintaString()` ain't a string, it returns
+ * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid strings
+ * - `options.max` - if set, this is the maximum allowed string length
+ * - `options.min` - if set, this is the minimum allowed string length
+ * - `options.rx` - if set, this is an object which has a `test()` function
+ * 
+ * Otherwise, `aintaString()` returns `false`.
+ *
+ * @example
+ * import { aintaString } from '@0bdx/ainta';
+ * 
+ * aintaString("Ok!");
+ * // false
+ *
+ * aintaString(["N","o","p","e"]);
+ * // "A value is an array not type 'string'"
+ *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ *
+ * aintaString(99, 'redBalloons', { begin:'fly()' });
+ * // "fly(): `redBalloons` is type 'number' not 'string'"
+ * 
+ * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
+ * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
+ *
+ * @param {any} value
+ *    The value to validate.
+ * @param {string} [identifier]
+ *    Optional name to call `value` in the explanation, if invalid.
+ * @param {Options} [options={}]
+ *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ * @returns {false|string}
+ *    Returns `false` if `value` is valid, or an explanation if not.
+ *    Also returns an explanation if any of the `options` it uses are invalid.
+ */
+function aintaString(
+    value,
+    identifier,
+    options = emptyOptions,
+) {
+    // Use aintaType() to check whether `typeof value` is 'string'.
+    // If not, bail out right away.
+    let result = aintaType(value, identifier, { ...options, type:STRING });
+    if (result) return result;
+
+    // If `options.is`, `.max`, `.min` or `.rx` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ max:undefined }` acts the same way as `{}`, which
+    // is why we use `options.max !== void 0` instead of `"max" in options`.
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
+    const optionsMax = options.max;
+    const hasMax = optionsMax !== void 0;
+    const optionsMin = options.min;
+    const hasMin = optionsMin !== void 0;
+    const optionsRx = options.rx;
+    const hasRx = optionsRx !== void 0;
+    result =
+        validateArrayOfScalarsOption(IS, optionsIs, hasIs, STRING)
+     || validateNumericOption(MAX, optionsMax, hasMax, false, true)
+     || validateNumericOption(MIN, optionsMin, hasMin, false, true)
+     || validateRxishOption(RX, optionsRx, hasRx)
+
+    // If `options.max` and `options.min` are both being used, but `max` is less
+    // than `min`, return a helpful result.
+     || (hasMax && hasMin && optionsMax < optionsMin
+        ? CANNOT_OPTIONS + MAX + '` <' + _BT_OPTIONS_DOT + MIN + '`'
+
+        // Check that `value` exists in the `options.is` array, if set.
+        : hasIs && optionsIs.indexOf(value) == -1
+            ? saq(value) + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+
+            // Check that `value` is not longer than `options.max`, if set.
+            : hasMax && optionsMax < value.length
+                ? saq(value) + _IS_NOT_ + MAX + ' ' + optionsMax
+
+                // Check that `value` is not shorter than `options.max`, if set.
+                : hasMin && optionsMin > value.length
+                    ? saq(value) + _IS_NOT_ + MIN + ' ' + optionsMin
+
+                    // Test if `value` passes the RegExp option, if set.
+                    : hasRx && !optionsRx.test(value)
+                        ? saq(value) + ' fails '
+                            + (optionsRx instanceof RegExp
+                                ? optionsRx
+                                : 'custom test ' + FUNCTION)
+                        : ''
+    );
+
+    return result
+        ? buildResultPrefix(options.begin, identifier) + result
+        : false;
+}
 
 /**
  * ### Utilities used by many `ainta` functions.
@@ -284,6 +681,206 @@ const stringifyTypes = types => quote(
         .join(':'));
 
 /**
+ * Checks that an object or class confirms to a given schema.
+ * 
+ * @TODO refactor, it's too long and repetitive
+ *
+ * @param {object} ooc
+ *    The object or class to validate.
+ * @param {Options} options
+ *    The standard `ainta` configuration object. `options.open` changes the
+ *    validation behavior of `validateAgainstSchema()`.
+ * @param {boolean} hasSchema
+ *    `true` if `options.schema` is present.
+ * @param {string} unidentified
+ *    Way to refer to `ooc`, if `identifier` is not set.
+ * @param {string} [identifier]
+ *    Name to call `ooc` in the explanation, if invalid.
+ * @return {false|string}
+ *    Returns `false` if `ooc` conforms, or an explanation if not.
+ */
+const validateAgainstSchema = (ooc, options, hasSchema, unidentified, identifier) => {
+    const { begin, open, schema } = options;
+
+    // Step through each property in the `schema` object.
+    let result;
+    if (hasSchema) {
+        for (const key in schema) {
+            const { types } = schema[key];
+            const val = ooc[key]; // could be undefined
+            const type = typeof val;
+
+            // If `options.types` exists, create `typedArrays` - a shallow copy
+            // of `options.types` without the top-level strings.
+            // So `[ "boolean", ["string"], "symbol", ["number","bigint"] ]`
+            // becomes `[ ["string"], ["number","bigint"] ]`.
+            const typedArrays = types && types.filter(isArray);
+
+            // If no types are defined, the property can be any type but must exist.
+            // @TODO still reject NaN, null and [], and write unit tests
+            // @TODO still apply other options, and write unit tests
+            if (!types || !types.length) {
+                if (type === UNDEFINED) {
+                    result = [key, IS_ + 'missing'];
+                    break;
+                }
+
+            // Otherwise, if `options.types` contains at least one array, and if
+            // `val` is an array, and if one of its item's types is not included
+            // in `schema.types`, return an explanation of the problem.
+            } else if (typedArrays.length && isArray(val)) {
+
+                // If one of the 'typed arrays' is empty, it means that anything
+                // goes. `val` must be valid, so skip to the next `key`.
+                // @TODO still reject NaN, null and [], and write unit tests
+                // @TODO still apply other options, and write unit tests
+                for (const typedArray of typedArrays)
+                    if (typedArray.length === 0) continue;
+
+                // Define three variables which will be used inside the
+                // `validateValue` loop, but also used afterwards.
+                const valLen = val.length;
+                let i = 0;
+                let item;
+
+                // Step through each 'typed array', and validate the value
+                // against each one in turn.
+                let validTypedArray = false;
+                validateValue: for (const typedArray of typedArrays) {
+
+                    // Step through each item in the value, to check whether
+                    // the current 'typed array' can validate it.
+                    i = 0; // IMPORTANT: no `let`, `i` must stay in upper scope
+                    for (; i<valLen; i++) {
+                        item = val[i]; // IMPORTANT: no `const`, `item` must stay in upper scope
+
+                        // Step through each type-string in the current 'typed array'.
+                        let validItem = false;
+                        for (let j=0, len=typedArray.length; j<len; j++) {
+                            if (typeof item === typedArray[j]) {
+                                validItem = true;
+                                break;
+                            }
+                        }
+
+                        // If the current 'typed array' could not validate the
+                        // item, try the next 'typed array'.
+                        if (!validItem) continue validateValue;
+                    }
+
+                    // Every item in the value has validated against the current
+                    // 'typed array', so skip to the next `key`.
+                    validTypedArray = true;
+                    break validateValue;
+                }
+
+                // If `validTypedArray` has not been set to `true`, `val` could
+                // not be validated against any of the 'typed arrays', so write
+                // an explanation, and break out of the top-level loop.
+                if (!validTypedArray) {
+                    const itemType = typeof item;
+                    result = [`${key}[${i}]`, IS_ + (
+                        item === null
+                            ? NULL
+                            : isArray(item)
+                                ? AN_ARRAY
+                                : TYPE_ + quote(itemType)
+                        ) + ',' + _NOT_ + (
+                            typedArrays.length === 1
+                                ? THE_BT_OPT_TYPES_BT_
+                                : ONE + _OF_ + THE_BT_OPT_TYPES_BT_
+                        ) + stringifyTypes(types)
+                    ];
+                    break;
+                }
+
+                // `val` is an array, and its basic type is included in
+                // `schema.types`, but it may still be have invalid items.
+                // @TODO check that `most` and `least` (in which schema?) are followed
+                const valIdentifier = identifier
+                    ? identifier + '.' + key
+                    : key + _OF_ + unidentified;            
+                for (let i=0; i<valLen; i++) {
+                    const item = val[i];
+                    const ainta = {
+                        number: aintaNumber, // @TODO write unit tests
+                        object: aintaObject, // @TODO recursive! write unit tests
+                        string: aintaString, // @TODO write unit tests
+                    }[typeof item];
+                    if (ainta) {
+                        const result = ainta(
+                            item,
+                            `${valIdentifier}[${i}]`,
+                            { begin:options.begin, ...schema[key] },
+                        );
+                        if (result) return result;
+                    }
+                }
+
+            // `val` is not an array. If its type is not included in `schema.types`,
+            // return an explanation of the problem.
+            // Note that `indexOf()` will ignore any 'typed arrays' in the schema.
+            } else if (types.indexOf(type) === -1) {
+                result = [key, IS_ + (
+                    val === null
+                        ? NULL
+                        : isArray(val)
+                            ? AN_ARRAY
+                            : TYPE_ + quote(type)
+                    ) + ',' + _NOT_ + (
+                        types.length === 1
+                            ? THE_BT_OPT_TYPES_BT_
+                            : ONE + _OF_ + THE_BT_OPT_TYPES_BT_
+                    ) + stringifyTypes(types)
+                ];
+                break;
+
+            // `val` is not an array, and its basic type is included in
+            // `schema.types`, but it may still be invalid.
+            } else {
+                const valIdentifier = identifier
+                    ? identifier + '.' + key
+                    : key + _OF_ + unidentified;
+                const ainta = {
+                    number: aintaNumber, // @TODO write unit tests
+                    object: aintaObject, // @TODO recursive! write unit tests
+                    string: aintaString, // @TODO write unit tests
+            }[type];
+                if (ainta) {
+                    const result = ainta(
+                        val,
+                        valIdentifier,
+                        { begin:options.begin, ...schema[key] },
+                    );
+                    if (result) return result;
+                }
+            }
+
+            // @TODO write full unit tests for nested schemas
+        }
+    }
+
+    // If `options.open` is `false` and the object contains a property which has
+    // no schema key, return an explanation of the problem.
+    if (!open) {
+        for (const key in ooc) {
+            if (!schema || !schema[key]) {
+                result = [key, 'is unexpected'];
+                break;
+            }
+        }
+    }
+
+    return result ? buildResultPrefix(
+            begin,
+            identifier && identifier + '.' + result[0],
+            '`' + result[0] + _OF_ + unidentified + '` '
+        ) + result[1]
+        : false
+    ;
+};
+
+/**
  * ### Validates an option which should be an array of scalars.
  * @private
  * 
@@ -298,7 +895,7 @@ const stringifyTypes = types => quote(
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  * @param {'boolean'|'number'|'string'} mustContain
- *    The array must contain at least one item of this type to be valid..
+ *    The array must contain at least one item of this type to be valid.
  * @returns {undefined|string}
  *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
@@ -328,6 +925,49 @@ const validateArrayOfScalarsOption = (key, val, has, mustContain) => {
         }
         if (!doesContain)
             return CANNOT_OPTIONS + key + '` contains no ' + mustContain + 's';
+    }
+};
+
+/**
+ * ### Validates an option which should be an array of types.
+ * @private
+ * 
+ * A 'type', in this context, is one of the strings that JavaScript's `typeof`
+ * can produce, like `"boolean"` or `"undefined"`.
+ * 
+ * @param {string} key
+ *    The name of the option to validate, eg "types".
+ * @param {any} val
+ *    The value of the option, which must be an array of types to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @returns {undefined|string}
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
+ */
+const validateArrayOfTypesOption = (key, val, has) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_AN_ARRAY
+            : !isArray(val)
+                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+                : '';
+                // : !allTypes && !val.length
+                //     ? 'is empty' // eg for `options.not`
+                //     : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+        for (let i=0, l=val.length; i<l; i++) {
+            const item = val[i];
+            const result = item === null
+                ? IS_NULL + _NOT_TYPE_ + QS
+                : isArray(item)
+                    ? IS_AN_ARRAY + _NOT_TYPE_ + QS
+                    : typeof item !== STRING
+                        ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
+                        : !isRecognisedType(item)
+                            ? saq(item) + _NOT_ + 'known'
+                            : '';
+            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+        }
     }
 };
 
@@ -511,162 +1151,6 @@ const validateSchemaOption = (schema, has) => {
 };
 
 /**
- * ### Validates an option which should be an array of types.
- * @private
- * 
- * A 'type', in this context, is one of the strings that JavaScript's `typeof`
- * can produce, like `"boolean"` or `"undefined"`.
- * 
- * @param {string} key
- *    The name of the option to validate, eg "types".
- * @param {any} val
- *    The value of the option, which must be an array of types to be valid.
- * @param {boolean} has
- *    Whether the option exists in the `options` object.
- * @returns {undefined|string}
- *    Returns `undefined` if `val` is valid, or an explanation if not.
- */
-const validateArrayOfTypesOption = (key, val, has) => {
-    if (has) {
-        const result = val === null
-            ? IS_NULL + _NOT_AN_ARRAY
-            : !isArray(val)
-                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : '';
-                // : !allTypes && !val.length
-                //     ? 'is empty' // eg for `options.not`
-                //     : '';
-        if (result) return CANNOT_OPTIONS + key + '` ' + result;
-        for (let i=0, l=val.length; i<l; i++) {
-            const item = val[i];
-            const result = item === null
-                ? IS_NULL + _NOT_TYPE_ + QS
-                : isArray(item)
-                    ? IS_AN_ARRAY + _NOT_TYPE_ + QS
-                    : typeof item !== STRING
-                        ? IS_TYPE_ + quote(typeof item) + _NOT_ + QS
-                        : !isRecognisedType(item)
-                            ? saq(item) + _NOT_ + 'known'
-                            : '';
-            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
-        }
-    }
-};
-
-/**
- * ### The string name of a JavaScript type, eg `"boolean"` or `"undefined"`.
- * 
- * This is the complete set of possible values that JavaScript's built in
- * `typeof` is able to produce.
- * 
- * `typeof` has a few surprises up its sleeve. For example, `null` is "object"
- * and `NaN` is "number".
- *
- * @typedef {'bigint'|'boolean'|'function'|'number'|'object'|'string'|'symbol'|'undefined'} TypeOf
- */
-
-/**
- * ### Describes the types an array can contain, eg `["object"]`.
- * 
- * - `["bigint","number"]` describes an array containing only numeric values
- * - `["boolean"]` describes an array containing only `true` and `false`
- * - `["string","undefined"]` can contain strings, `undefined` and 'empty slots'
- * - `[]` means an array which can contain any value
- *
- * @typedef {TypeOf[]} TypesOf
- */
-
-/**
- * ### One type, or an array of certain types, eg `"number"` or `["string"]`.
- *
- * @typedef {TypeOf|TypesOf} TypeOrTypesOf
- */
-
-// /**
-//  * ### Extends JavaScript types, adding useful extras like "any" and "null".
-//  *
-//  * @typedef {TypeOf|'any'|'array'|'nan'|'null'} Kind
-//  */
-
-/**
- * ### A configuration object, used by all `ainta` functions.
- * 
- * Each option is actually optional, so an empty object `{}` is perfectly valid.
- * 
- * Different options are used by different `ainta` functions. For example:
- * - `options.before` is used all the `ainta` functions
- * - `options.gte` is only used by `aintaNumber()`
- * - `options.is` is used by `aintaBoolean()`, `aintaNumber()` and
- *   `aintaString()`.
- *
- * @typedef {object} Options
- * @property {string} [begin]
- *    Optional text to begin the result with, eg a function name like "isOk()".
- * @property {number} [gte]
- *    Optional minimum value. Short for 'Greater Than or Equal'.
- * @property {(boolean|number|string)[]} [is]
- *    Optional array of valid values.
- * @property {(boolean|number|string)[]} [isnt]
- *    Optional array of invalid values.
- * @property {Rxish} [key]
- *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
- * @property {number} [least]
- *    Optional minimum length of an array.
- * @property {number} [lte]
- *    Optional maximum value. Short for 'Less Than or Equal'.
- * @property {number} [max]
- *    Optional maximum length of a string.
- * @property {number} [min]
- *    Optional minimum length of a string.
- * @property {number} [mod]
- *    Optional modulo which `value` must divide into without a remainder.
- * @property {number} [most]
- *    Optional maximum length of an array.
- * @property {boolean} [open]
- *    Optional flag. If true, an object can contain 'extra' properties -
- *    that is, key/value pairs not described in `options.schema`.
- * @property {boolean} [pass]
- *    Optional flag. If true, array items are validated using `options`.
- * @property {Rxish} [rx]
- *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
- * @property {string} [split]
- *    Optional string which tells `aintaList()` how to turn strings into arrays.
- * @property {Schema} [schema]
- *    Optional object which describes an object.
- * @property {TypeOrTypesOf} [type]
- *    Optional JavaScript type to expect, eg "number", ["object"] or "undefined".
- * @property {TypeOrTypesOf[]} [types]
- *    Optional array of JS types to expect, eg ["boolean"] for `true` or `false`
- *    or [["bigint","number"],"undefined"] for an optional array of numerics.  
- *    If missing, the property is allowed to be any type.
- */
-
-/**
- * ### An object with a `test()` function. Typically a JavaScript `RegExp`.
- * 
- * @typedef {object} Rxish
- * @property {function(string):boolean} test
- *    The test function, which takes a string and returns `true` if it passes
- *    and `false` if it fails.
- */
-
-/**
- * ### An object which describes an object's properties.
- * 
- * @typedef {Object.<string, Options>} Schema
- */
-
-/**
- * ### An empty object with the `Options` type, used by all `ainta` functions.
- * 
- * Using an empty `{}` is really a way to export the `Options` type, and avoid a
- * "File '.../ainta/src/options.js' is not a module. ts(2306)" error.
- * 
- * @type Options
- */
-const emptyOptions = {};
-
-/**
  * ### Validates a value using JavaScript's native `typeof`.
  *
  * If the `typeof` the first argument passed to `aintaType()` ain't
@@ -786,34 +1270,37 @@ function aintaType(
 }
 
 /**
- * ### Validates a number.
+ * ### Validates a function or class.
  *
- * If the first argument passed to `aintaNumber()` ain't a number, it returns
- * a short explanation of what went wrong.
+ * If the first argument passed to `aintaFunction()` ain't a function or class,
+ * it returns a short explanation of what went wrong.
+ *
+ * Else, if `options.schema` is set, but the function (assumed to be a class)
+ * does not conform to that schema, an explanation is returned. `options.open`
+ * determines whether static members not in `.schema` are allowed.
  * 
- * Else, if the first argument fails any of the following conditions, it also
- * returns an explanation of what went wrong:
- * - `options.gte` - if set, the value must be Greater Than or Equal to this
- * - `options.is` - if set, this is an array containing valid numbers
- * - `options.lte` - if set, the value must be Less Than or Equal to this
- * - `options.mod` - if set, the value must be divisible by this
+ * Otherwise, `aintaFunction()` returns `false`.
  * 
- * Otherwise, `aintaNumber()` returns `false`.
- * 
- * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
- * doesn't consider `NaN` to be a number.
+ * @TODO discuss static vs instance methods and properties
+ * @TODO figure out best way to validate instance methods and properties
  *
  * @example
- * import { aintaNumber } from '@0bdx/ainta';
+ * import { aintaFunction } from '@0bdx/ainta';
  * 
- * aintaNumber(-Infinity);
+ * aintaFunction(function increment(n){ return n+1 });
+ * // false
+ * 
+ * aintaFunction(1234);
+ * // "A value is type 'number' not 'function'"
+ *
+ * aintaFunction(null, 'callback', { begin:'runCallback()' });
+ * // "runCallback(): `callback` is null not type 'function'"
+ *
+ * aintaObject(class{ static staticNum = 123 }, 'Anon', { open:true });
  * // false
  *
- * aintaNumber(NaN);
- * // "A value is the special `NaN` value"
- *
- * aintaNumber('99', 'redBalloons', { begin:'fly()' });
- * // "fly(): `redBalloons` is type 'string' not 'number'"
+ * aintaFunction(class{}, 'Anon', { schema:{ staticNum:{ types:['number']} } });
+ * // "`Anon.staticNum` is missing"
  *
  * @param {any} value
  *    The value to validate.
@@ -821,229 +1308,19 @@ function aintaType(
  *    Optional name to call `value` in the explanation, if invalid.
  * @param {Options} [options={}]
  *    The standard `ainta` configuration object (optional, defaults to `{}`).
+ *    `options.open` determines whether properties not in `.schema` are allowed.
  * @returns {false|string}
  *    Returns `false` if `value` is valid, or an explanation if not.
- *    Also returns an explanation if any of the `options` it uses are invalid.
  */
-function aintaNumber(
+function aintaFunction(
     value,
     identifier,
     options = emptyOptions,
 ) {
-    // Use aintaType() to check whether `typeof value` is 'number'.
+    // Use aintaType() to check whether `typeof value` is 'function'.
     // If not, bail out right away.
-    let result = aintaType(value, identifier, { ...options, type:NUMBER });
+    let result = aintaType(value, identifier, { ...options, type:FUNCTION });
     if (result) return result;
-
-    // If `options.gte`, `.is` `.lte` or `.mod` are invalid, return a helpful
-    // result. Note that setting these to `undefined` may be useful in some
-    // cases, so that `{ gte:undefined }` acts the same way as `{}`, which
-    // is why we use `options.gte !== void 0` instead of `"gte" in options`.
-    const optionsGte = options.gte;
-    const hasGte = optionsGte !== void 0;
-    const optionsIs = options.is;
-    const hasIs = optionsIs !== void 0;
-    const optionsLte = options.lte;
-    const hasLte = optionsLte !== void 0;
-    const optionsMod = options.mod;
-    const hasMod = optionsMod !== void 0;
-    result =
-        validateNumericOption(GTE, optionsGte, hasGte)
-     || validateArrayOfScalarsOption(IS, optionsIs, hasIs, NUMBER)
-     || validateNumericOption(LTE, optionsLte, hasLte)
-     || validateNumericOption(MOD, optionsMod, hasMod, true)
-
-    // If `options.gte` and `options.lte` are both being used, but `gte` is
-    // greater than `lte`, return a helpful result.
-     || (hasGte && hasLte && optionsGte > optionsLte
-        ? CANNOT_OPTIONS + 'gte` > `options.lte`'
-
-        // `aintaNumber()` differs from `aintaType(..., { type:'number' })`,
-        // in that it doesn't consider `NaN` to be a number. At this point,
-        // `typeof value` is 'number' but it could be `NaN`, so use `isNaN()`
-        // to check. Note that `Number.isNaN()` is not necessary in this case.
-        : isNaN(value)
-            ? IS_NAN + _NOT_A_REGULAR_ + NUMBER
-
-            // Check that `value` exists in the `options.is` array, if set.
-            : hasIs && optionsIs.indexOf(value) == -1
-                ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
-
-                // Compare `value` with the 'Greater Than or Equal' option, if set.
-                : hasGte && optionsGte > value
-                    ? value + _IS_NOT_ + GTE + ' ' + optionsGte
-
-                    // Compare `value` with the 'Less Than or Equal' option, if set.
-                    : hasLte && optionsLte < value
-                        ? value + _IS_NOT_ + LTE + ' ' + optionsLte
-
-                        // Test if `value` divides by the modulo option, if set.
-                        : hasMod && (value % optionsMod)
-                            ? value + ' is not divisible by ' + optionsMod
-                            : ''
-    );
-
-    return result
-        ? buildResultPrefix(options.begin, identifier) + result
-        : false;
-}
-
-/**
- * ### Validates a string.
- *
- * If the first argument passed to `aintaString()` ain't a string, it returns
- * a short explanation of what went wrong.
- * 
- * Else, if the first argument fails any of the following conditions, it also
- * returns an explanation of what went wrong:
- * - `options.is` - if set, this is an array containing valid strings
- * - `options.max` - if set, this is the maximum allowed string length
- * - `options.min` - if set, this is the minimum allowed string length
- * - `options.rx` - if set, this is an object which has a `test()` function
- * 
- * Otherwise, `aintaString()` returns `false`.
- *
- * @example
- * import { aintaString } from '@0bdx/ainta';
- * 
- * aintaString("Ok!");
- * // false
- *
- * aintaString(["N","o","p","e"]);
- * // "A value is an array not type 'string'"
- *
- * aintaString(99, 'redBalloons', { begin:'fly()' });
- * // "fly(): `redBalloons` is type 'number' not 'string'"
- *
- * aintaString(99, 'redBalloons', { begin:'fly()' });
- * // "fly(): `redBalloons` is type 'number' not 'string'"
- * 
- * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
- * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- *    Also returns an explanation if any of the `options` it uses are invalid.
- */
-function aintaString(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Use aintaType() to check whether `typeof value` is 'string'.
-    // If not, bail out right away.
-    let result = aintaType(value, identifier, { ...options, type:STRING });
-    if (result) return result;
-
-    // If `options.is`, `.max`, `.min` or `.rx` are invalid, return a helpful
-    // result. Note that setting these to `undefined` may be useful in some
-    // cases, so that `{ max:undefined }` acts the same way as `{}`, which
-    // is why we use `options.max !== void 0` instead of `"max" in options`.
-    const optionsIs = options.is;
-    const hasIs = optionsIs !== void 0;
-    const optionsMax = options.max;
-    const hasMax = optionsMax !== void 0;
-    const optionsMin = options.min;
-    const hasMin = optionsMin !== void 0;
-    const optionsRx = options.rx;
-    const hasRx = optionsRx !== void 0;
-    result =
-        validateArrayOfScalarsOption(IS, optionsIs, hasIs, STRING)
-     || validateNumericOption(MAX, optionsMax, hasMax, false, true)
-     || validateNumericOption(MIN, optionsMin, hasMin, false, true)
-     || validateRxishOption(RX, optionsRx, hasRx)
-
-    // If `options.max` and `options.min` are both being used, but `max` is less
-    // than `min`, return a helpful result.
-     || (hasMax && hasMin && optionsMax < optionsMin
-        ? CANNOT_OPTIONS + MAX + '` <' + _BT_OPTIONS_DOT + MIN + '`'
-
-        // Check that `value` exists in the `options.is` array, if set.
-        : hasIs && optionsIs.indexOf(value) == -1
-            ? saq(value) + _IS_NOT_IN_ + saq(optionsIs.join(':'))
-
-            // Check that `value` is not longer than `options.max`, if set.
-            : hasMax && optionsMax < value.length
-                ? saq(value) + _IS_NOT_ + MAX + ' ' + optionsMax
-
-                // Check that `value` is not shorter than `options.max`, if set.
-                : hasMin && optionsMin > value.length
-                    ? saq(value) + _IS_NOT_ + MIN + ' ' + optionsMin
-
-                    // Test if `value` passes the RegExp option, if set.
-                    : hasRx && !optionsRx.test(value)
-                        ? saq(value) + ' fails '
-                            + (optionsRx instanceof RegExp
-                                ? optionsRx
-                                : 'custom test ' + FUNCTION)
-                        : ''
-    );
-
-    return result
-        ? buildResultPrefix(options.begin, identifier) + result
-        : false;
-}
-
-/**
- * ### Validates that a value is a regular JavaScript object.
- *
- * If the first argument passed to `aintaObject()` ain't an object, it returns
- * a short explanation of what went wrong.
- *
- * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong.
- * 
- * Otherwise, `aintaObject()` returns `false`.
- * 
- * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
- * doesn't consider `null` or an array to be an object.
- * 
- * @example
- * import { aintaObject } from '@0bdx/ainta';
- * 
- * aintaObject({ red:0xFF0000 }, 'palette', { open:true });
- * // false
- *
- * aintaObject([]);
- * // "A value is an array not type 'object'"
- *
- * aintaObject(null, 'lookup', { begin:'processLookup()' });
- * // "processLookup(): `lookup` is null not an object"
- *
- * const schema = { red: { rx:/^#[a-f0-9]{6}$/i, types:['string'] } };
- * aintaObject({ red:0xFF0000 }, 'palette', { schema });
- * // "`palette.red` is type 'number' not 'string'"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- */
-function aintaObject(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Check that `value` is a regular JavaScript object. If not, bail out.
-    let result = value === null
-        ? IS_NULL + _NOT_A_REGULAR_ + OBJECT
-        : isArray(value)
-            ? IS_AN_ARRAY + _NOT_A_REGULAR_ + OBJECT
-            : typeof value !== OBJECT
-                ? IS_TYPE_ + quote(typeof value) + _NOT_ + QO
-                : ''
-    ;
-    if (result) return buildResultPrefix(options.begin, identifier) + result;
 
     // If `options.open` or `.schema` are invalid, return a helpful result. Note
     // that setting these to `undefined` may be useful in some cases, so that
@@ -1058,207 +1335,10 @@ function aintaObject(
 
     // If the validation above has failed, return an explanation.
     return result
-        ? buildResultPrefix(options.begin, identifier, 'An object ') + result
+        ? buildResultPrefix(options.begin, identifier, 'A class ') + result
 
-        // Otherwise, check that the object conforms to `options.schema` if set.
-        : validateAgainstSchema(value, options, hasSchema, identifier);
-}
-
-/**
- * Checks that an object `obj` confirms to a given schema.
- * 
- * @TODO refactor, it's too long and repetitive
- *
- * @param {object} obj
- *    The object to validate.
- * @param {Options} options
- *    The standard `ainta` configuration object (optional, defaults to `{}`)..
- * @param {boolean} hasSchema
- *    `true` if `options.schema` is present.
- * @param {string} identifier
- *    Optional name to call `obj` in the explanation, if invalid.
- * @return {false|string}
- *    Returns `false` if `obj` conforms, or an explanation if not.
- */
-function validateAgainstSchema(obj, options, hasSchema, identifier) {
-    const { begin, open, schema } = options;
-
-    // Step through each property in the `schema` object.
-    let result;
-    if (hasSchema) {
-        for (const key in schema) {
-            const { types } = schema[key];
-            const val = obj[key]; // could be undefined
-            const type = typeof val;
-
-            // If `options.types` exists, create `typedArrays` - a shallow copy
-            // of `options.types` without the top-level strings.
-            // So `[ "boolean", ["string"], "symbol", ["number","bigint"] ]`
-            // becomes `[ ["string"], ["number","bigint"] ]`.
-            const typedArrays = types && types.filter(isArray);
-
-            // If no types are defined, the property can be any type but must exist.
-            // @TODO still reject NaN, null and [], and write unit tests
-            // @TODO still apply other options, and write unit tests
-            if (!types || !types.length) {
-                if (type === UNDEFINED) {
-                    result = [key, IS_ + 'missing'];
-                    break;
-                }
-
-            // Otherwise, if `options.types` contains at least one array, and if
-            // `val` is an array, and if one of its item's types is not included
-            // in `schema.types`, return an explanation of the problem.
-            } else if (typedArrays.length && isArray(val)) {
-
-                // If one of the 'typed arrays' is empty, it means that anything
-                // goes. `val` must be valid, so skip to the next `key`.
-                // @TODO still reject NaN, null and [], and write unit tests
-                // @TODO still apply other options, and write unit tests
-                for (const typedArray of typedArrays)
-                    if (typedArray.length === 0) continue;
-
-                // Define three variables which will be used inside the
-                // `validateValue` loop, but also used afterwards.
-                const valLen = val.length;
-                let i = 0;
-                let item;
-
-                // Step through each 'typed array', and validate the value
-                // against each one in turn.
-                let validTypedArray = false;
-                validateValue: for (const typedArray of typedArrays) {
-
-                    // Step through each item in the value, to check whether
-                    // the current 'typed array' can validate it.
-                    i = 0; // IMPORTANT: no `let`, `i` must stay in upper scope
-                    for (; i<valLen; i++) {
-                        item = val[i]; // IMPORTANT: no `const`, `item` must stay in upper scope
-
-                        // Step through each type-string in the current 'typed array'.
-                        let validItem = false;
-                        for (let j=0, len=typedArray.length; j<len; j++) {
-                            if (typeof item === typedArray[j]) {
-                                validItem = true;
-                                break;
-                            }
-                        }
-
-                        // If the current 'typed array' could not validate the
-                        // item, try the next 'typed array'.
-                        if (!validItem) continue validateValue;
-                    }
-
-                    // Every item in the value has validated against the current
-                    // 'typed array', so skip to the next `key`.
-                    validTypedArray = true;
-                    break validateValue;
-                }
-
-                // If `validTypedArray` has not been set to `true`, `val` could
-                // not be validated against any of the 'typed arrays', so write
-                // an explanation, and break out of the top-level loop.
-                if (!validTypedArray) {
-                    const itemType = typeof item;
-                    result = [`${key}[${i}]`, IS_ + (
-                        item === null
-                            ? NULL
-                            : isArray(item)
-                                ? AN_ARRAY
-                                : TYPE_ + quote(itemType)
-                        ) + ',' + _NOT_ + (
-                            typedArrays.length === 1
-                                ? THE_BT_OPT_TYPES_BT_
-                                : ONE + _OF_ + THE_BT_OPT_TYPES_BT_
-                        ) + stringifyTypes(types)
-                    ];
-                    break;
-                }
-
-                // `val` is an array, and its basic type is included in
-                // `schema.types`, but it may still be have invalid items.
-                // @TODO check that `most` and `least` (in which schema?) are followed
-                const valIdentifier = identifier
-                    ? identifier + '.' + key
-                    : key + _OF_ + AN_OBJECT;            
-                for (let i=0; i<valLen; i++) {
-                    const item = val[i];
-                    const ainta = {
-                        number: aintaNumber, // @TODO write unit tests
-                        object: aintaObject, // @TODO recursive! write unit tests
-                        string: aintaString, // @TODO write unit tests
-                    }[typeof item];
-                    if (ainta) {
-                        const result = ainta(
-                            item,
-                            `${valIdentifier}[${i}]`,
-                            { begin:options.begin, ...schema[key] },
-                        );
-                        if (result) return result;
-                    }
-                }
-
-            // `val` is not an array. If its type is not included in `schema.types`,
-            // return an explanation of the problem.
-            // Note that `indexOf()` will ignore any 'typed arrays' in the schema.
-            } else if (types.indexOf(type) === -1) {
-                result = [key, IS_ + (
-                    val === null
-                        ? NULL
-                        : isArray(val)
-                            ? AN_ARRAY
-                            : TYPE_ + quote(type)
-                    ) + ',' + _NOT_ + (
-                        types.length === 1
-                            ? THE_BT_OPT_TYPES_BT_
-                            : ONE + _OF_ + THE_BT_OPT_TYPES_BT_
-                    ) + stringifyTypes(types)
-                ];
-                break;
-
-            // `val` is not an array, and its basic type is included in
-            // `schema.types`, but it may still be invalid.
-            } else {
-                const valIdentifier = identifier
-                    ? identifier + '.' + key
-                    : key + _OF_ + AN_OBJECT;
-                const ainta = {
-                    number: aintaNumber, // @TODO write unit tests
-                    object: aintaObject, // @TODO recursive! write unit tests
-                    string: aintaString, // @TODO write unit tests
-            }[type];
-                if (ainta) {
-                    const result = ainta(
-                        val,
-                        valIdentifier,
-                        { begin:options.begin, ...schema[key] },
-                    );
-                    if (result) return result;
-                }
-            }
-
-            // @TODO write full unit tests for nested schemas
-        }
-    }
-
-    // If `options.open` is `false` and the object contains a property which has
-    // no schema key, return an explanation of the problem.
-    if (!open) {
-        for (const key in obj) {
-            if (!schema || !schema[key]) {
-                result = [key, 'is unexpected'];
-                break;
-            }
-        }
-    }
-
-    return result ? buildResultPrefix(
-            begin,
-            identifier && identifier + '.' + result[0],
-            '`' + result[0] + _OF_ + AN_OBJECT + '` '
-        ) + result[1]
-        : false
-    ;
+        // Otherwise, check that the class conforms to `options.schema` if set.
+        : validateAgainstSchema(value, options, hasSchema, A_CLASS, identifier);
 }
 
 /**
@@ -1413,6 +1493,10 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
                 : SQI + _OF_ + AN_ARRAY;
             let result;
             switch (type) {
+                case FUNCTION:
+                    result = aintaFunction(item, itemIdentifier, options);
+                    if (result) return result;
+                    break;
                 case NUMBER:
                     result = aintaNumber(item, itemIdentifier, options);
                     if (result) return result;
@@ -1662,6 +1746,10 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
                 : key + _OF_ + A_DICTIONARY;
             let result;
             switch (type) {
+                case FUNCTION:
+                    result = aintaFunction(value, valueIdentifier, options);
+                    if (result) return result;
+                    break;
                 case NUMBER:
                     result = aintaNumber(value, valueIdentifier, options);
                     if (result) return result;
@@ -1681,42 +1769,6 @@ function validateEveryProperty(entries, length, options, hasKey, hasTypes, ident
     }
 
     return false;
-}
-
-/**
- * ### Validates a function.
- *
- * If the first argument passed to `aintaFunction()` ain't a function, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
- *
- * @example
- * import { aintaFunction } from '@0bdx/ainta';
- * 
- * aintaFunction(function increment(n){ return n+1 });
- * // false
- *
- * aintaFunction(1234);
- * // "A value is type 'number' not 'function'"
- *
- * aintaFunction(null, 'callback', { begin:'runCallback()' });
- * // "runCallback(): `callback` is null not type 'function'"
- *
- * @param {any} value
- *    The value to validate.
- * @param {string} [identifier]
- *    Optional name to call `value` in the explanation, if invalid.
- * @param {Options} [options={}]
- *    The standard `ainta` configuration object (optional, defaults to `{}`).
- * @returns {false|string}
- *    Returns `false` if `value` is valid, or an explanation if not.
- */
-function aintaFunction(
-    value,
-    identifier,
-    options = emptyOptions,
-) {
-    // Use aintaType() to check whether `value` is a function.
-    return aintaType(value, identifier, { ...options, type:FUNCTION });
 }
 
 /**

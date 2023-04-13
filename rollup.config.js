@@ -37,6 +37,9 @@ const terserOptions = {
 //    otherwise unminified app, library or website
 const config = {
     input: basicLibConfig.input,
+    onwarn(warning, rollupWarn) { // circular deps are intentional, in ainta
+        if (warning.code !== 'CIRCULAR_DEPENDENCY') rollupWarn(warning);
+    },
     output: [
         basicLibConfig.output,
         {
