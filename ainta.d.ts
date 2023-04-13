@@ -173,7 +173,13 @@ export function aintaArray(value: any, identifier?: string, options?: Options): 
  * ### Validates a boolean.
  *
  * If the first argument passed to `aintaBoolean()` ain't a boolean, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
+ *
+ * Else, if the first argument fails the following condition, it also returns
+ * an explanation of what went wrong:
+ * - `options.is` - if set, this is an array that may contain `true` or `false`
+ *
+ * Otherwise, `aintaBoolean()` returns `false`.
  *
  * @example
  * import { aintaBoolean } from '@0bdx/ainta';
@@ -186,6 +192,9 @@ export function aintaArray(value: any, identifier?: string, options?: Options): 
  *
  * aintaBoolean(null, 'isDone', { begin:'doThings()' });
  * // "doThings(): `isDone` is null not type 'boolean'"
+ *
+ * aintaBoolean(false. 'shouldBeAffirmative', { is:[ true ] });
+ * // "`shouldBeAffirmative` false is not in 'true'"
  *
  * @param {any} value
  *    The value to validate.
@@ -307,6 +316,7 @@ export function aintaNull(value: any, identifier?: string, options?: Options): f
  * Else, if the first argument fails any of the following conditions, it also
  * returns an explanation of what went wrong:
  * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.is` - if set, this is an array containing valid numbers
  * - `options.lte` - if set, the value must be Less Than or Equal to this
  * - `options.mod` - if set, the value must be divisible by this
  *

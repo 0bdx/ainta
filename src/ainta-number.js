@@ -1,15 +1,22 @@
 import aintaType from './ainta-type.js';
 import {
     _IS_NOT_,
+    _IS_NOT_IN_,
     _NOT_A_REGULAR_,
     CANNOT_OPTIONS,
     GTE,
+    IS,
     IS_NAN,
     LTE,
     MOD,
     NUMBER,
 } from './constants.js';
-import { buildResultPrefix, validateNumericOption } from './helpers.js';
+import {
+    buildResultPrefix,
+    saq,
+    validateArrayOfScalarsOption,
+    validateNumericOption,
+} from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
@@ -21,6 +28,7 @@ import emptyOptions from './options.js';
  * Else, if the first argument fails any of the following conditions, it also
  * returns an explanation of what went wrong:
  * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.is` - if set, this is an array containing valid numbers
  * - `options.lte` - if set, the value must be Less Than or Equal to this
  * - `options.mod` - if set, the value must be divisible by this
  * 
@@ -61,17 +69,21 @@ export default function aintaNumber(
     let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // If `options.gte`, `.lte` or `.mod` are invalid, return a helpful result.
-    // Note that setting these to `undefined` may be useful in some cases, so
-    // that `{ gte:undefined }` acts the same way as `{}`, which is why we use
-    // `options.gte !== void 0` instead of `"gte" in options`.
+    // If `options.gte`, `.is` `.lte` or `.mod` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ gte:undefined }` acts the same way as `{}`, which
+    // is why we use `options.gte !== void 0` instead of `"gte" in options`.
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsLte = options.lte;
     const hasLte = optionsLte !== void 0;
     const optionsMod = options.mod;
     const hasMod = optionsMod !== void 0;
-    result = validateNumericOption(GTE, optionsGte, hasGte)
+    result =
+        validateNumericOption(GTE, optionsGte, hasGte)
+     || validateArrayOfScalarsOption(IS, optionsIs, hasIs, NUMBER)
      || validateNumericOption(LTE, optionsLte, hasLte)
      || validateNumericOption(MOD, optionsMod, hasMod, true)
 
@@ -87,18 +99,22 @@ export default function aintaNumber(
         : isNaN(value)
             ? IS_NAN + _NOT_A_REGULAR_ + NUMBER
 
-            // Compare `value` with the 'Greater Than or Equal' option, if set.
-            : hasGte && optionsGte > value
-                ? value + _IS_NOT_ + GTE + ' ' + optionsGte
+            // Check that `value` exists in the `options.is` array, if set.
+            : hasIs && optionsIs.indexOf(value) == -1
+                ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
 
-                // Compare `value` with the 'Less Than or Equal' option, if set.
-                : hasLte && optionsLte < value
-                    ? value + _IS_NOT_ + LTE + ' ' + optionsLte
+                // Compare `value` with the 'Greater Than or Equal' option, if set.
+                : hasGte && optionsGte > value
+                    ? value + _IS_NOT_ + GTE + ' ' + optionsGte
 
-                    // Test if `value` divides by the modulo option, if set.
-                    : hasMod && (value % optionsMod)
-                        ? value + ' is not divisible by ' + optionsMod
-                        : ''
+                    // Compare `value` with the 'Less Than or Equal' option, if set.
+                    : hasLte && optionsLte < value
+                        ? value + _IS_NOT_ + LTE + ' ' + optionsLte
+
+                        // Test if `value` divides by the modulo option, if set.
+                        : hasMod && (value % optionsMod)
+                            ? value + ' is not divisible by ' + optionsMod
+                            : ''
     );
 
     return result
@@ -117,8 +133,31 @@ export default function aintaNumber(
  *    Throws an `Error` if a test fails
  */
 export function aintaNumberTest(f) {
-    const equal = (actual, expected) => { if (actual !== expected) throw Error(
-        `actual:\n${actual}\n!== expected:\n${expected}\n`) };
+    const e2l = e => (e.stack.split('\n')[2].match(/([^\/]+\.js:\d+):\d+\)?$/)||[])[1];
+    const equal = (actual, expected) => { if (actual === expected) return;
+        try { throw Error() } catch(err) { throw Error(`actual:\n${actual}\n` +
+            `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
+
+    // Invalid `options.is` produces a helpful result.
+    equal(f(1, 'one', { begin:'Is', is:null }),
+        "Is: `one` cannot be validated, `options.is` is null not an array");
+    // @ts-expect-error
+    equal(f(2, undefined, { is:77 }),
+        "A value cannot be validated, `options.is` is type 'number' not an array");
+    equal(f(3, 'three', { is:[0,-1.1,9e9,NaN,Infinity,true,'6',null] }),
+        "`three` cannot be validated, `options.is[7]` is null not type 'boolean:number:string'");
+    // @ts-expect-error
+    equal(f(4, undefined, { begin:'Is', is:[false,1,2,3,4,'5',[6],7] }),
+        "Is: A value cannot be validated, `options.is[6]` is an array not type 'boolean:number:string'");
+    // @ts-expect-error
+    equal(f(5, 'five', { is:[0,1,2,3,4,Symbol('five')] }),
+        "`five` cannot be validated, `options.is[5]` is type 'symbol' not 'boolean:number:string'");
+    equal(f(6, 'six', { is:[] }),
+        "`six` cannot be validated, `options.is` is empty");
+    equal(f(7, 'seven', { is:[true,false] }),
+        "`seven` cannot be validated, `options.is` contains no numbers");
+    equal(f(8, 'eight', { is:['abc','77',''] }),
+        "`eight` cannot be validated, `options.is` contains no numbers");
 
     // Invalid `options.gte` produces a helpful result.
     equal(f(1, 'one', { gte:null, lte:null }), // the `lte` error is ignored
@@ -164,7 +203,7 @@ export function aintaNumberTest(f) {
     equal(f(5, 'five', { mod:0 }),
         "`five` cannot be validated, `options.mod` is zero");
 
-    // Typical usage without `options.gte`, `.lte` or `.mod`.
+    // Typical usage without `options.gte`, `.is` `.lte` or `.mod`.
     equal(f(-Infinity),
         false);
     equal(f(5.5e5, null, { begin:'Number Test' }),
@@ -205,6 +244,30 @@ export function aintaNumberTest(f) {
         false);
     equal(f(Number(false), '0%', { begin:'percent()', gte:10e-3 }),
         "percent(): `0%` 0 is not gte 0.01");
+
+    // Typical `options.is` usage.
+    equal(f(3, null, { is:[3,'2',true] }),
+        false);
+    equal(f(2, null, { is:[3,'2',true] }),
+        "A value 2 is not in '3:2:true'"); // @TODO it's unclear what the problem really is - improve readability
+    equal(f(-0, 'negative_zero', { is:[0] }),
+        false);
+    equal(f(-0, 'negative_zero', { is:[NaN,'0'] }),
+        "`negative_zero` 0 is not in 'NaN:0'");
+    // equal(f(NaN, 'NaN', { is:[NaN] }),
+    //     false); // @TODO make a NaN be type 'number', and make 'num' in `options.fit` reject NaNs
+    // equal(f(NaN, 'NaN', { is:[0,'NaN'] }),
+    //     false); // @TODO make a NaN be type 'number', and make 'num' in `options.fit` reject NaNs
+    equal(f(118, null, { begin:'Number Test', is:[118, 118] }),
+        false);
+    equal(f(77, null, { begin:'Number Test', is:[118, 118] }),
+        "Number Test: A value 77 is not in '118:118'");
+    equal(f(0.01, 'onePercent', { begin:'percent()', is:[0.01] }),
+        false);
+    equal(f(0.01, 'onePercent', { begin:'percent()', is:[0.01001] }),
+        "percent(): `onePercent` 0.01 is not in '0.01001'");
+    equal(f(-1, 'too many items to log', { is:Array(100).fill(0).map((_,i)=>i) }),
+        "`too many items to log` -1 is not in '0:1:2:3:4:5:6:7:8:9:1...97:98:99'");
 
     // Typical `options.lte` usage.
     equal(f(-1.0, null, { lte:-5 }),

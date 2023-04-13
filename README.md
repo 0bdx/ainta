@@ -1,6 +1,6 @@
 # @0bdx/ainta
 
-Utilities for validating values in 0bdx apps, libraries and websites.
+__Utilities for validating values in 0bdx apps, libraries and websites.__
 
 ∅&nbsp; __Version:__ 0.0.15  
 ∅&nbsp; __NPM:__ <https://www.npmjs.com/package/@0bdx/ainta>  

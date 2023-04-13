@@ -139,10 +139,12 @@ export function aintaStringTest(f) {
             `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
 
     // Invalid `options.is` produces a helpful result.
+    equal(f('1', 'one', { begin:'Is', is:null }),
+        "Is: `one` cannot be validated, `options.is` is null not an array");
     // @ts-expect-error
     equal(f('2', undefined, { is:'nope' }),
         "A value cannot be validated, `options.is` is type 'string' not an array");
-    equal(f('3', 'three', { is:['0','1','2',null,'4','5'] }),
+    equal(f('3', 'three', { is:['zero',true,2,null,'four'] }),
         "`three` cannot be validated, `options.is[3]` is null not type 'boolean:number:string'");
     // @ts-expect-error
     equal(f('4', 'four', { is:['0','1','2','3',['4'],5] }),
@@ -152,10 +154,10 @@ export function aintaStringTest(f) {
         "`five` cannot be validated, `options.is[5]` is type 'bigint' not 'boolean:number:string'");
     equal(f('6', 'six', { is:[] }),
         "`six` cannot be validated, `options.is` is empty");
-    equal(f('6', 'six', { is:[true,false] }),
-        "`six` cannot be validated, `options.is` contains no strings");
-    equal(f('6', 'six', { is:[123,0b100] }),
-        "`six` cannot be validated, `options.is` contains no strings");
+    equal(f('7', 'seven', { is:[true,false] }),
+        "`seven` cannot be validated, `options.is` contains no strings");
+    equal(f('8', 'eight', { is:[123,0b100] }),
+        "`eight` cannot be validated, `options.is` contains no strings");
 
     // Invalid `options.max` produces a helpful result.
     equal(f('1', 'one', { max:null }), // the `ok` error is ignored
@@ -240,10 +242,10 @@ export function aintaStringTest(f) {
         "A value is type 'number' not 'string'");
 
     // Typical `options.is` usage.
-    equal(f('b', null, { is:['a','b','c'] }),
+    equal(f('2', null, { is:[3,'2',true] }),
         false);
-    equal(f('B', null, { is:['a','b','c'] }),
-        "A value 'B' is not in 'a:b:c'");
+    equal(f('true', null, { is:[3,'2',true] }),
+        "A value 'true' is not in '3:2:true'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f('', 'empty', { is:['Full',''] }),
         false);
     equal(f(' ', 'empty', { is:['Full',''] }),

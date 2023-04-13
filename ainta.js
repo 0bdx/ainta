@@ -794,6 +794,7 @@ function aintaType(
  * Else, if the first argument fails any of the following conditions, it also
  * returns an explanation of what went wrong:
  * - `options.gte` - if set, the value must be Greater Than or Equal to this
+ * - `options.is` - if set, this is an array containing valid numbers
  * - `options.lte` - if set, the value must be Less Than or Equal to this
  * - `options.mod` - if set, the value must be divisible by this
  * 
@@ -834,17 +835,21 @@ function aintaNumber(
     let result = aintaType(value, identifier, { ...options, type:NUMBER });
     if (result) return result;
 
-    // If `options.gte`, `.lte` or `.mod` are invalid, return a helpful result.
-    // Note that setting these to `undefined` may be useful in some cases, so
-    // that `{ gte:undefined }` acts the same way as `{}`, which is why we use
-    // `options.gte !== void 0` instead of `"gte" in options`.
+    // If `options.gte`, `.is` `.lte` or `.mod` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ gte:undefined }` acts the same way as `{}`, which
+    // is why we use `options.gte !== void 0` instead of `"gte" in options`.
     const optionsGte = options.gte;
     const hasGte = optionsGte !== void 0;
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsLte = options.lte;
     const hasLte = optionsLte !== void 0;
     const optionsMod = options.mod;
     const hasMod = optionsMod !== void 0;
-    result = validateNumericOption(GTE, optionsGte, hasGte)
+    result =
+        validateNumericOption(GTE, optionsGte, hasGte)
+     || validateArrayOfScalarsOption(IS, optionsIs, hasIs, NUMBER)
      || validateNumericOption(LTE, optionsLte, hasLte)
      || validateNumericOption(MOD, optionsMod, hasMod, true)
 
@@ -860,18 +865,22 @@ function aintaNumber(
         : isNaN(value)
             ? IS_NAN + _NOT_A_REGULAR_ + NUMBER
 
-            // Compare `value` with the 'Greater Than or Equal' option, if set.
-            : hasGte && optionsGte > value
-                ? value + _IS_NOT_ + GTE + ' ' + optionsGte
+            // Check that `value` exists in the `options.is` array, if set.
+            : hasIs && optionsIs.indexOf(value) == -1
+                ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
 
-                // Compare `value` with the 'Less Than or Equal' option, if set.
-                : hasLte && optionsLte < value
-                    ? value + _IS_NOT_ + LTE + ' ' + optionsLte
+                // Compare `value` with the 'Greater Than or Equal' option, if set.
+                : hasGte && optionsGte > value
+                    ? value + _IS_NOT_ + GTE + ' ' + optionsGte
 
-                    // Test if `value` divides by the modulo option, if set.
-                    : hasMod && (value % optionsMod)
-                        ? value + ' is not divisible by ' + optionsMod
-                        : ''
+                    // Compare `value` with the 'Less Than or Equal' option, if set.
+                    : hasLte && optionsLte < value
+                        ? value + _IS_NOT_ + LTE + ' ' + optionsLte
+
+                        // Test if `value` divides by the modulo option, if set.
+                        : hasMod && (value % optionsMod)
+                            ? value + ' is not divisible by ' + optionsMod
+                            : ''
     );
 
     return result
@@ -1355,6 +1364,7 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
     const definesTypes = hasTypes && types.length;
 
     // Step through each item in the `value` array.
+    // In 2023, `for` loops run 3x faster than array methods on the V8 engine.
     for (let i=0; i<length; i++) {
         const item = value[i];
         const type = typeof item;
@@ -1428,7 +1438,13 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
  * ### Validates a boolean.
  *
  * If the first argument passed to `aintaBoolean()` ain't a boolean, it returns
- * a short explanation of what went wrong. Otherwise it returns `false`.
+ * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails the following condition, it also returns
+ * an explanation of what went wrong:
+ * - `options.is` - if set, this is an array that may contain `true` or `false`
+ * 
+ * Otherwise, `aintaBoolean()` returns `false`.
  *
  * @example
  * import { aintaBoolean } from '@0bdx/ainta';
@@ -1441,6 +1457,9 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
  *
  * aintaBoolean(null, 'isDone', { begin:'doThings()' });
  * // "doThings(): `isDone` is null not type 'boolean'"
+ *
+ * aintaBoolean(false. 'shouldBeAffirmative', { is:[ true ] });
+ * // "`shouldBeAffirmative` false is not in 'true'"
  *
  * @param {any} value
  *    The value to validate.
@@ -1456,8 +1475,29 @@ function aintaBoolean(
     identifier,
     options = emptyOptions,
 ) {
-    // Use aintaType() to check whether `value` is a boolean.
-    return aintaType(value, identifier, { ...options, type:BOOLEAN });
+    // Use aintaType() to check whether `typeof value` is 'boolean'.
+    // If not, bail out right away.
+    let result = aintaType(value, identifier, { ...options, type:BOOLEAN });
+    if (result) return result;
+
+    // If `options.is` is invalid, return a helpful result. Note that setting
+    // this to `undefined` may be useful in some cases, so that
+    // `{ is:undefined }` acts the same way as `{}`, which is why we use
+    // `options.is !== void 0` instead of `"is" in options`.
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
+    result =
+        validateArrayOfScalarsOption(IS, optionsIs, hasIs, BOOLEAN)
+
+    // Check that `value` exists in the `options.is` array, if set.
+     || (hasIs && optionsIs.indexOf(value) == -1
+        ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+        : ''
+    );
+
+    return result
+        ? buildResultPrefix(options.begin, identifier) + result
+        : false;
 }
 
 /**
