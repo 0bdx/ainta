@@ -14,7 +14,7 @@ import {
 import {
     buildResultPrefix,
     saq,
-    validateArrayOfScalarsOption,
+    validateArrayOption,
     validateNumericOption,
     validateRxishOption,
 } from './helpers.js';
@@ -86,7 +86,7 @@ export default function aintaString(
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
     result =
-        validateArrayOfScalarsOption(IS, optionsIs, hasIs, STRING)
+        validateArrayOption(IS, optionsIs, hasIs, [STRING])
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(RX, optionsRx, hasRx)
@@ -144,20 +144,12 @@ export function aintaStringTest(f) {
     // @ts-expect-error
     equal(f('2', undefined, { is:'nope' }),
         "A value cannot be validated, `options.is` is type 'string' not an array");
-    equal(f('3', 'three', { is:['zero',true,2,null,'four'] }),
-        "`three` cannot be validated, `options.is[3]` is null not type 'boolean:number:string'");
-    // @ts-expect-error
-    equal(f('4', 'four', { is:['0','1','2','3',['4'],5] }),
-        "`four` cannot be validated, `options.is[4]` is an array not type 'boolean:number:string'");
-    // @ts-expect-error
-    equal(f('5', 'five', { is:['0','1','2','3','4',BigInt('77')] }),
-        "`five` cannot be validated, `options.is[5]` is type 'bigint' not 'boolean:number:string'");
-    equal(f('6', 'six', { is:[] }),
-        "`six` cannot be validated, `options.is` is empty");
-    equal(f('7', 'seven', { is:[true,false] }),
-        "`seven` cannot be validated, `options.is` contains no strings");
-    equal(f('8', 'eight', { is:[123,0b100] }),
-        "`eight` cannot be validated, `options.is` contains no strings");
+    equal(f('3', 'three', { is:[] }),
+        "`three` cannot be validated, `options.is` is empty");
+    equal(f('4', 'four', { is:[true,false] }),
+        "`four` cannot be validated, `options.is` contains nothing of type 'string'");
+    equal(f('5', 'five', { is:[123,0b100] }),
+        "`five` cannot be validated, `options.is` contains nothing of type 'string'");
 
     // Invalid `options.max` produces a helpful result.
     equal(f('1', 'one', { max:null }), // the `ok` error is ignored
@@ -242,10 +234,10 @@ export function aintaStringTest(f) {
         "A value is type 'number' not 'string'");
 
     // Typical `options.is` usage.
-    equal(f('2', null, { is:[3,'2',true] }),
+    equal(f('2', null, { is:[3,'2',true,()=>{}] }),
         false);
-    equal(f('true', null, { is:[3,'2',true] }),
-        "A value 'true' is not in '3:2:true'"); // @TODO it's unclear what the problem really is - improve readability
+    equal(f('true', null, { is:[3,'2',true,()=>{}] }),
+        "A value 'true' is not in '3:2:true:()=%3E%7B%7D'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f('', 'empty', { is:['Full',''] }),
         false);
     equal(f(' ', 'empty', { is:['Full',''] }),

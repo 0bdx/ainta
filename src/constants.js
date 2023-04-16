@@ -102,6 +102,9 @@ export const A_DICTIONARY = 'a dictionary';
 /** @constant {string} AN_OBJECT The literal string "an object" */
 export const AN_OBJECT = AN_ + OBJECT;
 
+/** @constant {string} IN_ The literal string "in " */
+export const IN_ = 'in ';
+
 /** @constant {string} IS_ The literal string "is " */
 export const IS_ = IS + ' ';
 
@@ -147,8 +150,11 @@ export const IS_NOT_ = IS + _NOT_;
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 export const _IS_NOT_ = ' ' + IS_NOT_;
 
+/** @constant {string} IS_NOT_IN_ The literal string "is not in " */
+export const IS_NOT_IN_ = IS_NOT_ + IN_;
+
 /** @constant {string} _IS_NOT_IN_ The literal string " is not in " */
-export const _IS_NOT_IN_ = _IS_NOT_ + 'in ';
+export const _IS_NOT_IN_ = _IS_NOT_ + IN_;
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 export const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;

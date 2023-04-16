@@ -7,18 +7,24 @@ import {
     _NOT_TYPE_,
     _OF_,
     AN_OBJECT,
+    FUNCTION,
     IS_AN_ARRAY,
+    IS_NOT_IN_,
     IS_NULL,
     IS_TYPE_,
+    IS,
     OBJECT,
     OPEN,
 } from './constants.js';
 import {
     buildResultPrefix,
+    containsOrContainsTheClassOf,
     isArray,
     QO,
     quote,
+    saqArray,
     validateAgainstSchema,
+    validateArrayOption,
     validateBooleanOption,
     validateSchemaOption,
 } from './helpers.js';
@@ -29,15 +35,17 @@ import emptyOptions from './options.js';
  *
  * If the first argument passed to `aintaObject()` ain't an object, it returns
  * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid classes
+ * - `options.open` - if set, properties not in `options.schema` are allowed
+ * - `options.schema` - if set, the value must conform to this
  *
- * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong. `options.open` determines whether properties
- * not in `.schema` are allowed.
- * 
  * Otherwise, `aintaObject()` returns `false`.
- * 
- * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
- * doesn't consider `null` or an array to be an object.
+ *
+ * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that
+ * it doesn't consider `null` or an array to be an object.
  * 
  * @example
  * import { aintaObject } from '@0bdx/ainta';
@@ -81,16 +89,26 @@ export default function aintaObject(
     ;
     if (result) return buildResultPrefix(options.begin, identifier) + result;
 
-    // If `options.open` or `.schema` are invalid, return a helpful result. Note
-    // that setting these to `undefined` may be useful in some cases, so that
-    // `{ schema:undefined }` acts the same way as `{}`, which is why we use
-    // `options.schema !== void 0` instead of `"schema" in options`.
+    // If `options.is`, `.open` or `.schema` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ is:undefined }` acts the same way as `{}`, which is why
+    // we use `options.is !== void 0` instead of `"is" in options`.
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsOpen = options.open;
     const hasOpen = optionsOpen !== void 0;
     const optionsSchema = options.schema;
     const hasSchema = optionsSchema !== void 0;
-    result = validateBooleanOption(OPEN, optionsOpen, hasOpen)
-     || validateSchemaOption(optionsSchema, hasSchema);
+    result = validateArrayOption(IS, optionsIs, hasIs, [OBJECT,FUNCTION])
+     || validateBooleanOption(OPEN, optionsOpen, hasOpen)
+     || validateSchemaOption(optionsSchema, hasSchema)
+
+    // Check that `options.is`, if set, contains a class which `value` is an
+    // instance of.
+     || (hasIs && !containsOrContainsTheClassOf(optionsIs, value)
+        ? IS_NOT_IN_ + saqArray(optionsIs)
+        : ''
+    );
 
     // If the validation above has failed, return an explanation.
     return result
@@ -118,6 +136,17 @@ export function aintaObjectTest(f) {
 
     /** @type {import('./options').Schema} */
     let schema;
+
+    // Invalid `options.is` produces a helpful result.
+    equal(f({a:1}, 'one', { begin:'Is', is:null }),
+        "Is: `one` cannot be validated, `options.is` is null not an array");
+    // @ts-expect-error
+    equal(f({a:2}, undefined, { is:{} }),
+        "An object cannot be validated, `options.is` is type 'object' not an array");
+    equal(f({a:3}, 'three', { is:[] }),
+        "`three` cannot be validated, `options.is` is empty");
+    equal(f({a:4}, 'four', { is:[true,123,'123'] }),
+        "`four` cannot be validated, `options.is` contains nothing of type 'object' or 'function'");
 
     // Invalid `options.open` produces a helpful result.
     equal(f({a:1}, 'one', { open:null }),
@@ -195,7 +224,7 @@ export function aintaObjectTest(f) {
     equal(f({a:'3'}, 'three', { schema: { a:{ types:[['string'],'boolean',['Number']] } } }),
         "`three` cannot be validated, `options.schema.a.types[2][0]` 'Number' not known");
 
-    // Typical usage without `options.open` or `.schema`.
+    // Typical usage without `options.is`, `.open` or `.schema`.
     equal(f({}),
         false);
     equal(f(new Date(), 'now'),
@@ -210,6 +239,23 @@ export function aintaObjectTest(f) {
         "`empty array` is an array not a regular object");
     equal(f(123, void 0, { type:'number' }),
         "A value is type 'number' not 'object'");
+
+    // Typical `options.is` usage.
+    class Foo { constructor(n) { this.n = n } }
+    const foo = new Foo();
+    equal(f(new Foo(3), null, { is:[3,'2',true,Foo], open:true }),
+        false);
+    equal(f({n:2}, null, { is:[3,'2',true,void 0,Foo], open:true }),
+        "An object is not in '3:2:true:undefined:Foo'");
+    equal(f(new Promise(()=>{}), 'new Promise()', { is:[Foo,{},Promise,null] }),
+        false);
+    equal(f({n:4}, 'new Promise()', { is:[Foo,{},Promise,null] }),
+        "`new Promise()` is not in 'Foo:Object:Promise:null'");
+    equal(f(foo, 'foo', { is:[foo], open:true }),
+        false);
+    equal(f({n:2}, 'foo', { is:[foo], open:true }),
+        "`foo` is not in 'Foo'");
+    // @TODO more tests
 
     // Typical `options.open` usage.
     equal(f({}, '', { open:true }),
@@ -277,29 +323,43 @@ export function aintaObjectTest(f) {
     equal(f({ extra:99, a:123 }, '', { open:true, schema }),
         "`a of an object` is type 'number', not the `options.types` 'undefined'");
 
+    // `options.schema` - deep nesting example 1.
+    schema = { a:{ types:['object'], schema: { b:{ types:['object'], schema: { c:{ types:['number'] } } } } } };
+    equal(f({ a:{ b:true } }, 'nest3', { schema }),
+        "`nest3.a.b` is type 'boolean', not the `options.types` 'object'");
+    equal(f({ a:{ b:{ b:{}, c:3 } } }, 'nest3', { schema }),
+        "`nest3.a.b.b` is unexpected");
+    equal(f({ a:{ b:{ c:3 } } }, 'nest3', { schema }),
+        false);
+
+    // `options.schema` - `pass:true` does not pass the schema down to the next level.
+    schema = { a:{ types:['object','undefined'] } };
+    equal(f({ a:{ a:{ a:123 } } }, 'nest3', { schema, pass:true }),
+        "`nest3.a.a` is unexpected");
+
     // `options.schema` - instance example.
-    class TestClassWith {
+    class ClassWhichDoesThings {
         constructor() { this.b = {} }
         doThings() {}
         a = true;
     }
-    const testInstWith = new TestClassWith();
+    const doesThings = new ClassWhichDoesThings();
     schema = { a:{ types:['boolean'] }, b:{ types:['object'] }, doThings: { types:['function'] } };
-    equal(f(testInstWith, 'testInstWith', { begin:'schema expects doThings()', open:false, schema }),
+    equal(f(doesThings, 'doesThings', { begin:'schema expects doThings()', open:false, schema }),
         false);
-    schema = { a:{ types:['boolean'] }, b:{ types:['object'] } }; // @TODO maybe testInstWith should be invalid
-    equal(f(testInstWith, 'testInstWith', { begin:'schema does not expect doThings()', open:false, schema }),
+    schema = { a:{ types:['boolean'] }, b:{ types:['object'] } }; // @TODO maybe doesThings should be invalid
+    equal(f(doesThings, 'doesThings', { begin:'schema does not expect doThings()', open:false, schema }),
         false);
-    class TestClassWithout {
+    class ClassWhichDoesNotDoThings {
         constructor() { this.b = {} }
         a = true;
     }
-    const testInstWithout = new TestClassWithout();
+    const doesNotDoThings = new ClassWhichDoesNotDoThings();
     schema = { a:{ types:['boolean'] }, b:{ types:['object'] }, doThings: { types:['function'] } };
-    equal(f(testInstWithout, 'testInstWithout', { begin:'schema expects doThings()', open:false, schema }),
-        "schema expects doThings(): `testInstWithout.doThings` is type 'undefined', not the `options.types` 'function'");
+    equal(f(doesNotDoThings, 'doesNotDoThings', { begin:'schema expects doThings()', open:false, schema }),
+        "schema expects doThings(): `doesNotDoThings.doThings` is type 'undefined', not the `options.types` 'function'");
     schema = { a:{ types:['boolean'] }, b:{ types:['object'] } };
-    equal(f(testInstWithout, 'testInstWithout', { begin:'schema does not expect doThings()', open:false, schema }),
+    equal(f(doesNotDoThings, 'doesNotDoThings', { begin:'schema does not expect doThings()', open:false, schema }),
         false);
 
     // `options.schema` - both properties must exist and be non-arrays of one type.

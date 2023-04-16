@@ -1,6 +1,6 @@
 import aintaType from './ainta-type.js';
 import { BOOLEAN, IS, _IS_NOT_IN_ } from './constants.js';
-import { buildResultPrefix, saq, validateArrayOfScalarsOption } from './helpers.js';
+import { buildResultPrefix, saq, validateArrayOption } from './helpers.js';
 import emptyOptions from './options.js';
 
 /**
@@ -56,7 +56,7 @@ export default function aintaBoolean(
     const optionsIs = options.is;
     const hasIs = optionsIs !== void 0;
     result =
-        validateArrayOfScalarsOption(IS, optionsIs, hasIs, BOOLEAN)
+        validateArrayOption(IS, optionsIs, hasIs, [BOOLEAN])
 
     // Check that `value` exists in the `options.is` array, if set.
      || (hasIs && optionsIs.indexOf(value) == -1
@@ -91,20 +91,12 @@ export function aintaBooleanTest(f) {
     // @ts-expect-error
     equal(f(false, undefined, { is:'nope' }),
         "A value cannot be validated, `options.is` is type 'string' not an array");
-    equal(f(true, 'three', { is:['zero',true,2,null,'four'] }),
-        "`three` cannot be validated, `options.is[3]` is null not type 'boolean:number:string'");
-    // @ts-expect-error
-    equal(f(false, 'four', { is:['0','1','2','3',['4'],5] }),
-        "`four` cannot be validated, `options.is[4]` is an array not type 'boolean:number:string'");
-    // @ts-expect-error
-    equal(f(true, 'five', { is:['0','1','2','3','4',BigInt('77')] }),
-        "`five` cannot be validated, `options.is[5]` is type 'bigint' not 'boolean:number:string'");
-    equal(f(false, 'six', { is:[] }),
-        "`six` cannot be validated, `options.is` is empty");
-    equal(f(true, 'seven', { is:['true',"strings don't count"] }),
-        "`seven` cannot be validated, `options.is` contains no booleans");
-    equal(f(false, 'eight', { is:[123,0b100] }),
-        "`eight` cannot be validated, `options.is` contains no booleans");
+    equal(f(false, 'three', { is:[] }),
+        "`three` cannot be validated, `options.is` is empty");
+    equal(f(true, 'four', { is:['true',"strings don't count"] }),
+        "`four` cannot be validated, `options.is` contains nothing of type 'boolean'");
+    equal(f(false, 'five', { is:[123,0b100] }),
+        "`five` cannot be validated, `options.is` contains nothing of type 'boolean'");
 
     // Typical usage.
     equal(f(true),

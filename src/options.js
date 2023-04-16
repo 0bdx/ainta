@@ -49,9 +49,9 @@
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
- * @property {(boolean|number|string)[]} [is]
+ * @property {any[]} [is]
  *    Optional array of valid values.
- * @property {(boolean|number|string)[]} [isnt]
+ * @property {any[]} [isnt]
  *    Optional array of invalid values.
  * @property {Rxish} [key]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.

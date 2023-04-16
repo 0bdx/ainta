@@ -14,7 +14,7 @@ import {
 import {
     buildResultPrefix,
     saq,
-    validateArrayOfScalarsOption,
+    validateArrayOption,
     validateNumericOption,
 } from './helpers.js';
 import emptyOptions from './options.js';
@@ -36,6 +36,10 @@ import emptyOptions from './options.js';
  * 
  * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
  * doesn't consider `NaN` to be a number.
+ *
+ * @TODO Add options.isnt, eg:
+ * - `options.isnt` - if set, this is an array containing invalid numbers
+ * - (by default, `.isnt` is [`NaN`], so set it to `[]` if `NaN` should be valid)
  *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
@@ -83,7 +87,7 @@ export default function aintaNumber(
     const hasMod = optionsMod !== void 0;
     result =
         validateNumericOption(GTE, optionsGte, hasGte)
-     || validateArrayOfScalarsOption(IS, optionsIs, hasIs, NUMBER)
+     || validateArrayOption(IS, optionsIs, hasIs, [NUMBER])
      || validateNumericOption(LTE, optionsLte, hasLte)
      || validateNumericOption(MOD, optionsMod, hasMod, true)
 
@@ -144,20 +148,12 @@ export function aintaNumberTest(f) {
     // @ts-expect-error
     equal(f(2, undefined, { is:77 }),
         "A value cannot be validated, `options.is` is type 'number' not an array");
-    equal(f(3, 'three', { is:[0,-1.1,9e9,NaN,Infinity,true,'6',null] }),
-        "`three` cannot be validated, `options.is[7]` is null not type 'boolean:number:string'");
-    // @ts-expect-error
-    equal(f(4, undefined, { begin:'Is', is:[false,1,2,3,4,'5',[6],7] }),
-        "Is: A value cannot be validated, `options.is[6]` is an array not type 'boolean:number:string'");
-    // @ts-expect-error
-    equal(f(5, 'five', { is:[0,1,2,3,4,Symbol('five')] }),
-        "`five` cannot be validated, `options.is[5]` is type 'symbol' not 'boolean:number:string'");
-    equal(f(6, 'six', { is:[] }),
-        "`six` cannot be validated, `options.is` is empty");
-    equal(f(7, 'seven', { is:[true,false] }),
-        "`seven` cannot be validated, `options.is` contains no numbers");
-    equal(f(8, 'eight', { is:['abc','77',''] }),
-        "`eight` cannot be validated, `options.is` contains no numbers");
+    equal(f(3, 'three', { is:[] }),
+        "`three` cannot be validated, `options.is` is empty");
+    equal(f(4, 'four', { is:[true,false] }),
+        "`four` cannot be validated, `options.is` contains nothing of type 'number'");
+    equal(f(5, 'five', { is:['abc','77',''] }),
+        "`five` cannot be validated, `options.is` contains nothing of type 'number'");
 
     // Invalid `options.gte` produces a helpful result.
     equal(f(1, 'one', { gte:null, lte:null }), // the `lte` error is ignored
@@ -246,10 +242,10 @@ export function aintaNumberTest(f) {
         "percent(): `0%` 0 is not gte 0.01");
 
     // Typical `options.is` usage.
-    equal(f(3, null, { is:[3,'2',true] }),
+    equal(f(3, null, { is:[3,'2',true,()=>{}] }),
         false);
-    equal(f(2, null, { is:[3,'2',true] }),
-        "A value 2 is not in '3:2:true'"); // @TODO it's unclear what the problem really is - improve readability
+    equal(f(2, null, { is:[3,'2',true,()=>{}] }),
+        "A value 2 is not in '3:2:true:()=%3E%7B%7D'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f(-0, 'negative_zero', { is:[0] }),
         false);
     equal(f(-0, 'negative_zero', { is:[NaN,'0'] }),

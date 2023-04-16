@@ -99,6 +99,9 @@ const A_DICTIONARY = 'a dictionary';
 /** @constant {string} AN_OBJECT The literal string "an object" */
 const AN_OBJECT = AN_ + OBJECT;
 
+/** @constant {string} IN_ The literal string "in " */
+const IN_ = 'in ';
+
 /** @constant {string} IS_ The literal string "is " */
 const IS_ = IS + ' ';
 
@@ -144,8 +147,11 @@ const IS_NOT_ = IS + _NOT_;
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 const _IS_NOT_ = ' ' + IS_NOT_;
 
+/** @constant {string} IS_NOT_IN_ The literal string "is not in " */
+const IS_NOT_IN_ = IS_NOT_ + IN_;
+
 /** @constant {string} _IS_NOT_IN_ The literal string " is not in " */
-const _IS_NOT_IN_ = _IS_NOT_ + 'in ';
+const _IS_NOT_IN_ = _IS_NOT_ + IN_;
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
@@ -210,9 +216,9 @@ const _NOT_TYPE_ = _NOT_ + TYPE_;
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @property {number} [gte]
  *    Optional minimum value. Short for 'Greater Than or Equal'.
- * @property {(boolean|number|string)[]} [is]
+ * @property {any[]} [is]
  *    Optional array of valid values.
- * @property {(boolean|number|string)[]} [isnt]
+ * @property {any[]} [isnt]
  *    Optional array of invalid values.
  * @property {Rxish} [key]
  *    Optional object with a `test()` function. Typically a JavaScript `RegExp`.
@@ -290,6 +296,10 @@ const emptyOptions = {};
  * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
  * doesn't consider `NaN` to be a number.
  *
+ * @TODO Add options.isnt, eg:
+ * - `options.isnt` - if set, this is an array containing invalid numbers
+ * - (by default, `.isnt` is [`NaN`], so set it to `[]` if `NaN` should be valid)
+ *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
  * 
@@ -336,7 +346,7 @@ function aintaNumber(
     const hasMod = optionsMod !== void 0;
     result =
         validateNumericOption(GTE, optionsGte, hasGte)
-     || validateArrayOfScalarsOption(IS, optionsIs, hasIs, NUMBER)
+     || validateArrayOption(IS, optionsIs, hasIs, [NUMBER])
      || validateNumericOption(LTE, optionsLte, hasLte)
      || validateNumericOption(MOD, optionsMod, hasMod, true)
 
@@ -380,15 +390,17 @@ function aintaNumber(
  *
  * If the first argument passed to `aintaObject()` ain't an object, it returns
  * a short explanation of what went wrong.
+ * 
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid classes
+ * - `options.open` - if set, properties not in `options.schema` are allowed
+ * - `options.schema` - if set, the value must conform to this
  *
- * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong. `options.open` determines whether properties
- * not in `.schema` are allowed.
- * 
  * Otherwise, `aintaObject()` returns `false`.
- * 
- * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
- * doesn't consider `null` or an array to be an object.
+ *
+ * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that
+ * it doesn't consider `null` or an array to be an object.
  * 
  * @example
  * import { aintaObject } from '@0bdx/ainta';
@@ -432,16 +444,26 @@ function aintaObject(
     ;
     if (result) return buildResultPrefix(options.begin, identifier) + result;
 
-    // If `options.open` or `.schema` are invalid, return a helpful result. Note
-    // that setting these to `undefined` may be useful in some cases, so that
-    // `{ schema:undefined }` acts the same way as `{}`, which is why we use
-    // `options.schema !== void 0` instead of `"schema" in options`.
+    // If `options.is`, `.open` or `.schema` are invalid, return a helpful
+    // result. Note that setting these to `undefined` may be useful in some
+    // cases, so that `{ is:undefined }` acts the same way as `{}`, which is why
+    // we use `options.is !== void 0` instead of `"is" in options`.
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsOpen = options.open;
     const hasOpen = optionsOpen !== void 0;
     const optionsSchema = options.schema;
     const hasSchema = optionsSchema !== void 0;
-    result = validateBooleanOption(OPEN, optionsOpen, hasOpen)
-     || validateSchemaOption(optionsSchema, hasSchema);
+    result = validateArrayOption(IS, optionsIs, hasIs, [OBJECT,FUNCTION])
+     || validateBooleanOption(OPEN, optionsOpen, hasOpen)
+     || validateSchemaOption(optionsSchema, hasSchema)
+
+    // Check that `options.is`, if set, contains a class which `value` is an
+    // instance of.
+     || (hasIs && !containsOrContainsTheClassOf(optionsIs, value)
+        ? IS_NOT_IN_ + saqArray(optionsIs)
+        : ''
+    );
 
     // If the validation above has failed, return an explanation.
     return result
@@ -517,7 +539,7 @@ function aintaString(
     const optionsRx = options.rx;
     const hasRx = optionsRx !== void 0;
     result =
-        validateArrayOfScalarsOption(IS, optionsIs, hasIs, STRING)
+        validateArrayOption(IS, optionsIs, hasIs, [STRING])
      || validateNumericOption(MAX, optionsMax, hasMax, false, true)
      || validateNumericOption(MIN, optionsMin, hasMin, false, true)
      || validateRxishOption(RX, optionsRx, hasRx)
@@ -553,17 +575,14 @@ function aintaString(
         : false;
 }
 
-/**
- * ### Utilities used by many `ainta` functions.
- * @private
+/** ### Utilities used by many `ainta` functions.
  * 
  * Reduces code duplication, and helps reduce the size of minified code.
  */
 
-/**
- * ### Builds the first part of an explanation.
- * @private
+/** ### Builds the first part of an explanation.
  *
+ * @private
  * @param {string} [begin]
  *    Optional text to begin the result with, eg a function name like "isOk()".
  * @param {string} [identifier]
@@ -582,21 +601,41 @@ const buildResultPrefix = (begin, identifier, unidentified) => {
     return (begin ? begin + ': ' : '') + ident;
 };
 
-/**
- * ### JavaScript's built-in `Array.isArray()`, for smaller minified files.
+/** ### Checks that `items` contains `value`, or the `value` class.
+ *
+ * @private
+ * @param {any[]} items
+ *    Can contain anything, but `containsOrContainsTheClassOf()` is only 
+ *    interested in functions (or more precisely classes), and objects.
+ * @param {object} instance
+ *    The object to check.
+ * @returns {boolean}
+ *    Returns `true` if `items` contains a class which `value` is an instance of.
+ */
+const containsOrContainsTheClassOf = (items, instance) => {
+    for (let i=0, len=items.length; i<len; i++) {
+        const item = items[i];
+        if (
+            instance === item
+          || (typeof item === FUNCTION && instance instanceof item)
+        ) return true;
+    }
+    return false;
+};
+
+/** ### JavaScript's built-in `Array.isArray()`, for smaller minified files.
  * @private
  */
 const isArray = Array.isArray;
 
-/**
- * ### Recognises a `typeof` string, or an array of `typeof` strings.
- * @private
+/** ### Recognises a `typeof` string, or an array of `typeof` strings.
  *
+ * @private
  * @param {string|string[]} type
  *    One of the strings that JavaScript's `typeof` produces, or an array of
  *    such strings, eg `"boolean"` or `["number","string","symbol"]`.
  * @returns {boolean}
- *    Returns true if `type` is a recognised `typeof` string.
+ *    Returns `true` if `type` is a recognised `typeof` string.
  */
 const isRecognisedType = type =>
     !isArray(type)
@@ -613,41 +652,44 @@ const isRecognisedType = type =>
         : false
 ;
 
-/**
- * ### Wraps a string or array of strings in single-quotes.
- * @private
+/** ### Wraps a string or array of strings in single-quotes.
  *
+ * @private
  * @param {string|string[]} [text]
  *    Text to wrap in single quotes.
  */
 const quote = text =>
     "'" + (Array.isArray(text) ? text.join(':') : text) + "'";
 
-/** @constant {string} QB The literal string "'boolean'" */
+/** @private @constant {string} QB The literal string "'boolean'" */
 const QB = quote(BOOLEAN);
 
-/** @constant {string} QN The literal string "'number'" */
+/** @private @constant {string} QN The literal string "'number'" */
 const QN = quote(NUMBER);
 
-/** @constant {string} QF The literal string "'function'" */
+/** @private @constant {string} QF The literal string "'function'" */
 const QF = quote(FUNCTION);
 
-/** @constant {string} QO The literal string "'object'" */
+/** @private @constant {string} QO The literal string "'object'" */
 const QO = quote(OBJECT);
 
-/** @constant {string} QS The literal string "'string'" */
+/** @private @constant {string} QS The literal string "'string'" */
 const QS = quote(STRING);
 
-/** @constant {string} QS The literal string "'boolean:number:string'" */
-const QBNS = quote(BOOLEAN + ':' + NUMBER + ':' + STRING);
+// @TODO use it or lose it
+// /**
+//  * @private
+//  * @constant {string} QBFNS
+//  * The literal string "'boolean:function:number:string'"
+//  */
+// export const QBFNS = quote(BOOLEAN+':'+FUNCTION+':'+NUMBER+':'+STRING);
 
-/**
- * ### Truncates text to 32 characters, and then uri-encodes it.
- * @private
+/** ### Truncates text to 32 characters, and then uri-encodes it.
  *
  * If `text` is an array of strings, they are joined with the ':' character
  * before processing. This is useful for `TypeOrTypesOf` arrays.
  * 
+ * @private
  * @param {string|string[]} [text]
  *    Text to sanitise.
  */
@@ -657,21 +699,43 @@ const sanitise = text => {
         : `${t.slice(0, 21)}...${t.slice(-8)}`).replace(/%20/g, ' ');
 };
 
-/**
- * ### Sanitises a string, and then wraps it in single-quotes.
+/** ### Sanitises a string, and then wraps it in single-quotes.
  * 
  * Makes .min.js files smaller, and source code more readable.
  * 
  * @private
- *
  * @param {string} [text]
  *    Text to sanitise and quote.
  */
 const saq = text => quote(sanitise(text));
 
-/**
- * ### Renders a 'typed array', to be used as part of an explanation.
+/** ### Sanitises an array, converts it to a string, and wraps it in quotes.
+ * 
+ * @private
+ * @param {any[]} [arr]
+ *    Array of items to stringify, sanitise and quote.
+ */
+const saqArray = arr => saq(
+    arr.map(i => i === null
+            ? NULL
+            : i === void 0
+                ? UNDEFINED
+                : typeof i === FUNCTION
+                    ? i.name
+                    : typeof i === OBJECT
+                        ? i.constructor.name
+                        : i
+            // : typeof i.name === STRING
+            //     ? i.name
+            //     : i.constructor && typeof i.constructor.name === STRING
+            //         ? i.constructor.name
+            //         : i
+    ).join(':')
+);
+
+/** ### Renders a 'typed array', to be used as part of an explanation.
  *
+ * @private
  * @param {(string|string[])[]} types
  *    An array, containing a mixture of strings and arrays-of-strings.
  */
@@ -680,11 +744,11 @@ const stringifyTypes = types => quote(
         .map(type => isArray(type) ? `[${type.join(':')}]` : type)
         .join(':'));
 
-/**
- * Checks that an object or class confirms to a given schema.
+/** ### Checks that an object or class confirms to a given schema.
  * 
  * @TODO refactor, it's too long and repetitive
  *
+ * @private
  * @param {object} ooc
  *    The object or class to validate.
  * @param {Options} options
@@ -799,7 +863,7 @@ const validateAgainstSchema = (ooc, options, hasSchema, unidentified, identifier
                 // @TODO check that `most` and `least` (in which schema?) are followed
                 const valIdentifier = identifier
                     ? identifier + '.' + key
-                    : key + _OF_ + unidentified;            
+                    : key + _OF_ + unidentified;
                 for (let i=0; i<valLen; i++) {
                     const item = val[i];
                     const ainta = {
@@ -881,61 +945,98 @@ const validateAgainstSchema = (ooc, options, hasSchema, unidentified, identifier
     ;
 };
 
-/**
- * ### Validates an option which should be an array of scalars.
- * @private
- * 
- * A 'scalar', in this context, is a boolean, number or string.
- * 
- * @TODO maybe add BigInt, null and Symbol
- * 
- * @param {string} key
- *    The name of the option to validate, eg "isnt".
- * @param {any} val
- *    The value of the option, which must be an array of scalars to be valid.
- * @param {boolean} has
- *    Whether the option exists in the `options` object.
- * @param {'boolean'|'number'|'string'} mustContain
- *    The array must contain at least one item of this type to be valid.
- * @returns {undefined|string}
- *    Returns `undefined` if `val` is valid, or an explanation if not.
- */
-const validateArrayOfScalarsOption = (key, val, has, mustContain) => {
-    if (has) {
-        const result = val === null
-            ? IS_NULL + _NOT_AN_ARRAY
-            : !isArray(val)
-                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
-                : !val.length
-                    ? 'is empty' // eg for `options.not`
-                    : '';
-        if (result) return CANNOT_OPTIONS + key + '` ' + result;
-        let doesContain = false;
-        for (let i=0, l=val.length; i<l; i++) {
-            const item = val[i];
-            const type = typeof item;
-            const result = item === null
-                ? IS_NULL + _NOT_TYPE_ + QBNS
-                : isArray(item)
-                    ? IS_AN_ARRAY + _NOT_TYPE_ + QBNS
-                    : type !== BOOLEAN && type !== NUMBER && type !== STRING
-                        ? IS_TYPE_ + quote(type) + _NOT_ + QBNS
-                        : '';
-            if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
-            if (type === mustContain) doesContain = true;
-        }
-        if (!doesContain)
-            return CANNOT_OPTIONS + key + '` contains no ' + mustContain + 's';
-    }
-};
+// @TODO use it or lose it
+// /** ### Validates an option which should be an array of functions.
+//  * 
+//  * `validateArrayOfFunctionsOption()` can be used to validate an array of
+//  * classes, too. That's because, in JavaScript, a `class` has type `"function"`.
+//  * 
+//  * @private
+//  * @param {string} key
+//  *    The name of the option to validate, eg "is".
+//  * @param {any} val
+//  *    The value of the option, which must be an array of functions to be valid.
+//  * @param {boolean} has
+//  *    Whether the option exists in the `options` object.
+//  * @returns {undefined|string}
+//  *    Returns `undefined` if `val` is valid, or an explanation if not.
+//  */
+// export const validateArrayOfFunctionsOption = (key, val, has) => {
+//     if (has) {
+//         const result = val === null
+//             ? IS_NULL + _NOT_AN_ARRAY
+//             : !isArray(val)
+//                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+//                 : '';
+//         if (result) return CANNOT_OPTIONS + key + '` ' + result;
+//         for (let i=0, l=val.length; i<l; i++) {
+//             const item = val[i];
+//             const result = item === null
+//                 ? IS_NULL + _NOT_TYPE_ + QF
+//                 : isArray(item)
+//                     ? IS_AN_ARRAY + _NOT_TYPE_ + QF
+//                     : typeof item !== FUNCTION
+//                         ? IS_TYPE_ + quote(typeof item) + _NOT_ + QF
+//                         : '';
+//             if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+//         }
+//     }
+// };
 
-/**
- * ### Validates an option which should be an array of types.
- * @private
+// @TODO use it or lose it
+// /** ### Validates an option which should be an array of scalars and functions.
+//  * 
+//  * A 'scalar', in this context, is a boolean, number or string.
+//  * 
+//  * @TODO maybe add BigInt, null and Symbol
+//  * 
+//  * @private
+//  * @param {string} key
+//  *    The name of the option to validate, eg "isnt".
+//  * @param {any} val
+//  *    The value of the option, which must be an array of scalars to be valid.
+//  * @param {boolean} has
+//  *    Whether the option exists in the `options` object.
+//  * @param {'boolean'|'function'|'number'|'string'} mustContain
+//  *    The array must contain at least one item of this type to be valid.
+//  * @returns {undefined|string}
+//  *    Returns `undefined` if `val` is valid, or an explanation if not.
+//  */
+// export const validateArrayOfBFNSOption = (key, val, has, mustContain) => {
+//     if (has) {
+//         const result = val === null
+//             ? IS_NULL + _NOT_AN_ARRAY
+//             : !isArray(val)
+//                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+//                 : !val.length
+//                     ? 'is empty'
+//                     : '';
+//         if (result) return CANNOT_OPTIONS + key + '` ' + result;
+//         let doesContain = false;
+//         for (let i=0, l=val.length; i<l; i++) {
+//             const item = val[i];
+//             const type = typeof item;
+//             const result = item === null
+//                 ? IS_NULL + _NOT_TYPE_ + QBFNS
+//                 : isArray(item)
+//                     ? IS_AN_ARRAY + _NOT_TYPE_ + QBFNS
+//                     : type !== BOOLEAN && type !== FUNCTION && type !== NUMBER && type !== STRING
+//                         ? IS_TYPE_ + quote(type) + _NOT_ + QBFNS
+//                         : '';
+//             if (result) return CANNOT_OPTIONS + key + '[' + i + ']` ' + result;
+//             if (type === mustContain) doesContain = true;
+//         }
+//         if (!doesContain)
+//             return CANNOT_OPTIONS + key + '` contains no ' + mustContain + 's';
+//     }
+// };
+
+/** ### Validates an option which should be an array of types.
  * 
  * A 'type', in this context, is one of the strings that JavaScript's `typeof`
  * can produce, like `"boolean"` or `"undefined"`.
  * 
+ * @private
  * @param {string} key
  *    The name of the option to validate, eg "types".
  * @param {any} val
@@ -952,9 +1053,6 @@ const validateArrayOfTypesOption = (key, val, has) => {
             : !isArray(val)
                 ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
                 : '';
-                // : !allTypes && !val.length
-                //     ? 'is empty' // eg for `options.not`
-                //     : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
         for (let i=0, l=val.length; i<l; i++) {
             const item = val[i];
@@ -972,10 +1070,59 @@ const validateArrayOfTypesOption = (key, val, has) => {
     }
 };
 
-/**
- * ### Validates an option which should be a boolean, eg `options.pass`.
+/** ### Validates an option which should be an array containing any types.
+ * 
  * @private
+ * @param {string} key
+ *    The name of the option to validate, eg "is".
+ * @param {any} val
+ *    The value of the option, which must be an array to be valid.
+ * @param {boolean} has
+ *    Whether the option exists in the `options` object.
+ * @param {('boolean'|'function'|'number'|'object'|'string')[]} mustContain
+ *    The array must contain at least one item of these types to be valid.
+ * @returns {undefined|string}
+ *    Returns `undefined` if `val` is valid, or an explanation if not.
+ */
+const validateArrayOption = (key, val, has, mustContain) => {
+    if (has) {
+        const result = val === null
+            ? IS_NULL + _NOT_AN_ARRAY
+            : !isArray(val)
+                ? IS_TYPE_ + quote(typeof val) + _NOT_AN_ARRAY
+                : !val.length
+                    ? 'is empty'
+                    : '';
+        if (result) return CANNOT_OPTIONS + key + '` ' + result;
+        let doesContain = false;
+        const mustContainLen = mustContain.length;
+        if (mustContainLen === 1) {
+            for (let i=0, l=val.length; i<l; i++) {
+                const type = typeof val[i];
+                if (type === mustContain[0]) {
+                    doesContain = true;
+                    break;
+                }
+            }
+        } else {
+            outer: for (let i=0, l=val.length; i<l; i++) {
+                const type = typeof val[i];
+                for (let j=0; j<mustContainLen; j++) {
+                    if (type === mustContain[j]) {
+                        doesContain = true;
+                        break outer;
+                    }
+                }
+            }
+        }
+        if (!doesContain) return CANNOT_OPTIONS + key +
+            "` contains nothing of type '" + mustContain.join("' or '") + "'";
+    }
+};
+
+/** ### Validates an option which should be a boolean, eg `options.pass`.
  *
+ * @private
  * @param {string} key
  *    The name of the option to validate, eg "pass".
  * @param {any} val
@@ -998,10 +1145,9 @@ const validateBooleanOption = (key, val, has) => {
     }    
 };
 
-/**
- * ### Validates an option which should be a number, eg `options.gte`.
- * @private
+/** ### Validates an option which should be a number, eg `options.gte`.
  *
+ * @private
  * @param {string} key
  *    The name of the option to validate, eg "gte".
  * @param {any} val
@@ -1034,10 +1180,9 @@ const validateNumericOption = (key, val, has, notZero, notNegative) => {
     }    
 };
 
-/**
- * ### Validates an option which should be an object with a `test()` function.
- * @private
+/** ### Validates an option which should be an object with a `test()` function.
  *
+ * @private
  * @param {string} key
  *    The name of the option to validate, eg "rx".
  * @param {any} val
@@ -1067,12 +1212,11 @@ const validateRxishOption = (key, val, has) => {
     }    
 };
 
-/**
- * ### Validates an option which describes an object.
- * @private
+/** ### Validates an option which describes an object.
  * 
  * @TODO refactor, it's too long and repetitive
- *
+*
+ * @private
  * @param {any} schema
  *    The value of the option, which must be an object to be valid.
  * @param {boolean} has
@@ -1140,7 +1284,7 @@ const validateSchemaOption = (schema, has) => {
                                             break there;
                                         }
                                     }
-                                }                    
+                                }
                             }
                         // @TODO more `schema` properties
                     }
@@ -1572,7 +1716,7 @@ function aintaBoolean(
     const optionsIs = options.is;
     const hasIs = optionsIs !== void 0;
     result =
-        validateArrayOfScalarsOption(IS, optionsIs, hasIs, BOOLEAN)
+        validateArrayOption(IS, optionsIs, hasIs, [BOOLEAN])
 
     // Check that `value` exists in the `options.is` array, if set.
      || (hasIs && optionsIs.indexOf(value) == -1

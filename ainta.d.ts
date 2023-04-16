@@ -48,11 +48,11 @@ export type Options = {
     /**
      * Optional array of valid values.
      */
-    is?: (boolean | number | string)[];
+    is?: any[];
     /**
      * Optional array of invalid values.
      */
-    isnt?: (boolean | number | string)[];
+    isnt?: any[];
     /**
      * Optional object with a `test()` function. Typically a JavaScript `RegExp`.
      */
@@ -341,6 +341,10 @@ export function aintaNull(value: any, identifier?: string, options?: Options): f
  * `aintaNumber()` differs from `aintaType(..., { type:'number' })`, in that it
  * doesn't consider `NaN` to be a number.
  *
+ * @TODO Add options.isnt, eg:
+ * - `options.isnt` - if set, this is an array containing invalid numbers
+ * - (by default, `.isnt` is [`NaN`], so set it to `[]` if `NaN` should be valid)
+ *
  * @example
  * import { aintaNumber } from '@0bdx/ainta';
  *
@@ -370,14 +374,16 @@ export function aintaNumber(value: any, identifier?: string, options?: Options):
  * If the first argument passed to `aintaObject()` ain't an object, it returns
  * a short explanation of what went wrong.
  *
- * Else, if the object does not conform to `options.schema`, it also returns an
- * explanation of what went wrong. `options.open` determines whether properties
- * not in `.schema` are allowed.
+ * Else, if the first argument fails any of the following conditions, it also
+ * returns an explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid classes
+ * - `options.open` - if set, properties not in `options.schema` are allowed
+ * - `options.schema` - if set, the value must conform to this
  *
  * Otherwise, `aintaObject()` returns `false`.
  *
- * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that it
- * doesn't consider `null` or an array to be an object.
+ * `aintaObject()` differs from `aintaType(..., { type:'object' })`, in that
+ * it doesn't consider `null` or an array to be an object.
  *
  * @example
  * import { aintaObject } from '@0bdx/ainta';
