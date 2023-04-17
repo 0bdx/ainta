@@ -1,5 +1,10 @@
 import aintaType from './ainta-type.js';
-import { BOOLEAN, IS, _IS_NOT_IN_ } from './constants.js';
+import {
+    _BT_OPT_IS_BT_,
+    BOOLEAN,
+    IS_NOT_IN,
+    IS,
+} from './constants.js';
 import { buildResultPrefix, saq, validateArrayOption } from './helpers.js';
 import emptyOptions from './options.js';
 
@@ -60,7 +65,7 @@ export default function aintaBoolean(
 
     // Check that `value` exists in the `options.is` array, if set.
      || (hasIs && optionsIs.indexOf(value) == -1
-        ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+        ? IS_NOT_IN + _BT_OPT_IS_BT_ + saq(optionsIs.join(':'))
         : ''
     );
 
@@ -122,21 +127,21 @@ export function aintaBooleanTest(f) {
     equal(f(true, null, { is:[3,'false',true] }),
         false);
     equal(f(false, null, { is:[3,'false',true] }),
-        "A value false is not in '3:false:true'"); // @TODO it's unclear what the problem really is - improve readability
+        "A value is not in `options.is` '3:false:true'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f(false, 'negatory', { is:[false] }),
         false);
     equal(f(false, 'negatory', { is:[true,'false'] }),
-        "`negatory` false is not in 'true:false'"); // @TODO it's unclear what the problem really is - improve readability
+        "`negatory` is not in `options.is` 'true:false'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f(true, 'repeat values', { begin:'Boolean Test', is:[true,true] }),
         false);
     equal(f(false, 'repeat values', { begin:'Boolean Test', is:[true,true] }),
-        "Boolean Test: `repeat values` false is not in 'true:true'");
+        "Boolean Test: `repeat values` is not in `options.is` 'true:true'");
     equal(f(true, null, { begin:'neverFails()', is:[true,false]}),
         false);
     equal(f(false, null, { begin:'neverFails()', is:[true,false]}),
         false);
-    equal(f(true, 'too many items to log', { is:Array(10).fill(0).map(_=>false) }),
-        "`too many items to log` true is not in 'false:false:false:fal...se:false'");
+    equal(f(true, 'too_many_items_to_log', { is:Array(10).fill(0).map(_=>false) }),
+        "`too_many_items_to_log` is not in `options.is` 'false:false:false:fal...se:false'");
 
     // Extra `options` values cause TS errors, but do not prevent normal use.
     // @ts-expect-error

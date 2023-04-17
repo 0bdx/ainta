@@ -1,4 +1,5 @@
 import {
+    _BT_OPT_IS_BT_,
     _BT_OPTIONS_DOT,
     _IS_NOT_,
     _NOT_,
@@ -9,7 +10,7 @@ import {
     AN_OBJECT,
     FUNCTION,
     IS_AN_ARRAY,
-    IS_NOT_IN_,
+    IS_NOT_IN,
     IS_NULL,
     IS_TYPE_,
     IS,
@@ -99,14 +100,15 @@ export default function aintaObject(
     const hasOpen = optionsOpen !== void 0;
     const optionsSchema = options.schema;
     const hasSchema = optionsSchema !== void 0;
-    result = validateArrayOption(IS, optionsIs, hasIs, [OBJECT,FUNCTION])
+    result =
+        validateArrayOption(IS, optionsIs, hasIs, [OBJECT,FUNCTION])
      || validateBooleanOption(OPEN, optionsOpen, hasOpen)
      || validateSchemaOption(optionsSchema, hasSchema)
 
     // Check that `options.is`, if set, contains a class which `value` is an
     // instance of.
      || (hasIs && !containsOrContainsTheClassOf(optionsIs, value)
-        ? IS_NOT_IN_ + saqArray(optionsIs)
+        ? IS_NOT_IN + _BT_OPT_IS_BT_ + saqArray(optionsIs)
         : ''
     );
 
@@ -246,15 +248,15 @@ export function aintaObjectTest(f) {
     equal(f(new Foo(3), null, { is:[3,'2',true,Foo], open:true }),
         false);
     equal(f({n:2}, null, { is:[3,'2',true,void 0,Foo], open:true }),
-        "An object is not in '3:2:true:undefined:Foo'");
+        "An object is not in `options.is` '3:2:true:undefined:Foo'");
     equal(f(new Promise(()=>{}), 'new Promise()', { is:[Foo,{},Promise,null] }),
         false);
     equal(f({n:4}, 'new Promise()', { is:[Foo,{},Promise,null] }),
-        "`new Promise()` is not in 'Foo:Object:Promise:null'");
+        "`new Promise()` is not in `options.is` 'Foo:Object:Promise:null'");
     equal(f(foo, 'foo', { is:[foo], open:true }),
         false);
     equal(f({n:2}, 'foo', { is:[foo], open:true }),
-        "`foo` is not in 'Foo'");
+        "`foo` is not in `options.is` 'Foo'");
     // @TODO more tests
 
     // Typical `options.open` usage.
@@ -534,7 +536,7 @@ export function aintaObjectTest(f) {
     equal(f({ str:'AAA' }, 'caps', { begin:'String opts', schema }),
         "String opts: `caps.str` 'AAA' fails /a/");
     equal(f({ str:'aaa' }, void 0, { begin:'String opts', schema }),
-        "String opts: `str of an object` 'aaa' is not in 'a:aa:AAA:aaaa:aaaaa'");
+        "String opts: `str of an object` 'aaa' is not in `options.is` 'a:aa:AAA:aaaa:aaaaa'");
     equal(f({ str:'aa' }, 'double_a', { schema }),
         false);
 }

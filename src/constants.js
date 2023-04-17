@@ -102,8 +102,11 @@ export const A_DICTIONARY = 'a dictionary';
 /** @constant {string} AN_OBJECT The literal string "an object" */
 export const AN_OBJECT = AN_ + OBJECT;
 
+/** @constant {string} IN The literal string "in" */
+export const IN = 'in';
+
 /** @constant {string} IN_ The literal string "in " */
-export const IN_ = 'in ';
+export const IN_ = IN + ' ';
 
 /** @constant {string} IS_ The literal string "is " */
 export const IS_ = IS + ' ';
@@ -122,6 +125,9 @@ export const THE = 'the';
 
 /** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
 export const _BT_OPTIONS_DOT = ' `options.';
+
+/** @constant {string} _BT_OPT_IS_BT_ The literal string "`options.is` " */
+export const _BT_OPT_IS_BT_ = _BT_OPTIONS_DOT + IS + '` ';
 
 /** @constant {string} THE_BT_OPT_TYPES_BT_ The literal string "the `options.types` " */
 export const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
@@ -150,8 +156,14 @@ export const IS_NOT_ = IS + _NOT_;
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 export const _IS_NOT_ = ' ' + IS_NOT_;
 
+/** @constant {string} IS_NOT_IN The literal string "is not in" */
+export const IS_NOT_IN = IS_NOT_ + IN;
+
 /** @constant {string} IS_NOT_IN_ The literal string "is not in " */
 export const IS_NOT_IN_ = IS_NOT_ + IN_;
+
+/** @constant {string} _IS_NOT_IN The literal string " is not in" */
+export const _IS_NOT_IN = _IS_NOT_ + IN;
 
 /** @constant {string} _IS_NOT_IN_ The literal string " is not in " */
 export const _IS_NOT_IN_ = _IS_NOT_ + IN_;

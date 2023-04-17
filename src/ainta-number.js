@@ -1,12 +1,13 @@
 import aintaType from './ainta-type.js';
 import {
+    _BT_OPT_IS_BT_,
     _IS_NOT_,
-    _IS_NOT_IN_,
     _NOT_A_REGULAR_,
     CANNOT_OPTIONS,
     GTE,
-    IS,
     IS_NAN,
+    IS_NOT_IN,
+    IS,
     LTE,
     MOD,
     NUMBER,
@@ -105,7 +106,7 @@ export default function aintaNumber(
 
             // Check that `value` exists in the `options.is` array, if set.
             : hasIs && optionsIs.indexOf(value) == -1
-                ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+                ? IS_NOT_IN + _BT_OPT_IS_BT_ + saq(optionsIs.join(':'))
 
                 // Compare `value` with the 'Greater Than or Equal' option, if set.
                 : hasGte && optionsGte > value
@@ -245,11 +246,11 @@ export function aintaNumberTest(f) {
     equal(f(3, null, { is:[3,'2',true,()=>{}] }),
         false);
     equal(f(2, null, { is:[3,'2',true,()=>{}] }),
-        "A value 2 is not in '3:2:true:()=%3E%7B%7D'"); // @TODO it's unclear what the problem really is - improve readability
+        "A value is not in `options.is` '3:2:true:()=%3E%7B%7D'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f(-0, 'negative_zero', { is:[0] }),
         false);
     equal(f(-0, 'negative_zero', { is:[NaN,'0'] }),
-        "`negative_zero` 0 is not in 'NaN:0'");
+        "`negative_zero` is not in `options.is` 'NaN:0'");
     // equal(f(NaN, 'NaN', { is:[NaN] }),
     //     false); // @TODO make a NaN be type 'number', and make 'num' in `options.fit` reject NaNs
     // equal(f(NaN, 'NaN', { is:[0,'NaN'] }),
@@ -257,13 +258,13 @@ export function aintaNumberTest(f) {
     equal(f(118, null, { begin:'Number Test', is:[118, 118] }),
         false);
     equal(f(77, null, { begin:'Number Test', is:[118, 118] }),
-        "Number Test: A value 77 is not in '118:118'");
+        "Number Test: A value is not in `options.is` '118:118'");
     equal(f(0.01, 'onePercent', { begin:'percent()', is:[0.01] }),
         false);
     equal(f(0.01, 'onePercent', { begin:'percent()', is:[0.01001] }),
-        "percent(): `onePercent` 0.01 is not in '0.01001'");
-    equal(f(-1, 'too many items to log', { is:Array(100).fill(0).map((_,i)=>i) }),
-        "`too many items to log` -1 is not in '0:1:2:3:4:5:6:7:8:9:1...97:98:99'");
+        "percent(): `onePercent` is not in `options.is` '0.01001'");
+    equal(f(-1, 'too_many_items_to_log', { is:Array(100).fill(0).map((_,i)=>i) }),
+        "`too_many_items_to_log` is not in `options.is` '0:1:2:3:4:5:6:7:8:9:1...97:98:99'");
 
     // Typical `options.lte` usage.
     equal(f(-1.0, null, { lte:-5 }),

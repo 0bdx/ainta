@@ -55,23 +55,24 @@ export const buildResultPrefix = (begin, identifier, unidentified) => {
     return (begin ? begin + ': ' : '') + ident;
 };
 
-/** ### Checks that `items` contains `value`, or the `value` class.
+/** ### Checks that an array contains a value, or the class of that value.
  *
  * @private
  * @param {any[]} items
  *    Can contain anything, but `containsOrContainsTheClassOf()` is only 
  *    interested in functions (or more precisely classes), and objects.
- * @param {object} instance
+ * @param {object} value
  *    The object to check.
  * @returns {boolean}
- *    Returns `true` if `items` contains a class which `value` is an instance of.
+ *    Returns `true` if an item strict-equals `value`, or if an item is the
+ *    class which `value` is an instance of.
  */
-export const containsOrContainsTheClassOf = (items, instance) => {
+export const containsOrContainsTheClassOf = (items, value) => {
     for (let i=0, len=items.length; i<len; i++) {
         const item = items[i];
         if (
-            instance === item
-          || (typeof item === FUNCTION && instance instanceof item)
+            value === item
+          || (typeof item === FUNCTION && value instanceof item)
         ) return true;
     }
     return false;
@@ -534,7 +535,8 @@ export const validateArrayOfTypesOption = (key, val, has) => {
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  * @param {('boolean'|'function'|'number'|'object'|'string')[]} mustContain
- *    The array must contain at least one item of these types to be valid.
+ *    `val` must contain at least one item of these types to be valid.
+ *    - If `mustContain` is empty, `val` can contain anything
  * @returns {undefined|string}
  *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
@@ -548,8 +550,9 @@ export const validateArrayOption = (key, val, has, mustContain) => {
                     ? 'is empty'
                     : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
-        let doesContain = false;
         const mustContainLen = mustContain.length;
+        if (!mustContainLen) return;
+        let doesContain = false;
         if (mustContainLen === 1) {
             for (let i=0, l=val.length; i<l; i++) {
                 const type = typeof val[i];

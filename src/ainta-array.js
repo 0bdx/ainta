@@ -3,7 +3,7 @@ import aintaNumber from './ainta-number.js';
 import aintaObject from './ainta-object.js';
 import aintaString from './ainta-string.js';
 import {
-    _BT_OPTIONS_DOT,
+    _BT_OPT_IS_BT_,
     _IS_NOT_,
     _NOT_,
     _NOT_A_REGULAR_,
@@ -11,9 +11,12 @@ import {
     _OF_,
     AN_ARRAY,
     CANNOT_OPTIONS,
+    FUNCTION,
     IS_,
+    IS_NOT_IN,
     IS_NULL,
     IS_TYPE_,
+    IS,
     LEAST,
     MOST,
     NULL,
@@ -25,14 +28,16 @@ import {
     THE_BT_OPT_TYPES_BT_,
     TYPE_,
     TYPES,
-    FUNCTION,
 } from './constants.js';
 import {
     buildResultPrefix,
+    containsOrContainsTheClassOf,
     isArray,
     quote,
     saq,
+    saqArray,
     validateArrayOfTypesOption,
+    validateArrayOption,
     validateBooleanOption,
     validateNumericOption,
 } from './helpers.js';
@@ -46,10 +51,15 @@ import emptyOptions from './options.js';
  *
  * Else, if the array fails any of the following conditions, it also returns an
  * explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid items
  * - `options.least` - if set, there must be at least this number of items
  * - `options.most` - if set, there must not be more than this number of items
  * - `options.pass` - if set, each item is validated more deeply using `options`
  * - `options.types` - if set, all items must be one of these types
+ * 
+ * If `options.is` and `.types` are both set, items are considered valid if they
+ * are either in `options.is`, or are one of the `options.types`.
+ * @TODO test that
  * 
  * Otherwise, `aintaArray()` returns `false`.
  * 
@@ -93,10 +103,12 @@ export default function aintaArray(
     // Will probably be needed several times, below.
     const length = value.length;
 
-    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
-    // helpful result. Note that setting these to `undefined` may be useful in
-    // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
-    // is why we use `options.most !== void 0` instead of `"most" in options`.
+    // If any of the `options` properties are invalid, return a helpful result.
+    // Note that setting these to `undefined` may be useful in some cases, so
+    // that `{ is:undefined }` acts the same way as `{}`, which is why we use
+    // `options.is !== void 0` instead of `"is" in options`.
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsLeast = options.least;
     const hasLeast = optionsLeast !== void 0;
     const optionsMost = options.most;
@@ -106,7 +118,8 @@ export default function aintaArray(
     const optionsTypes = options.types;
     const hasTypes = optionsTypes !== void 0;
     const result =
-        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+        validateArrayOption(IS, optionsIs, hasIs, [])
+     || validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
      || validateArrayOfTypesOption(TYPES, optionsTypes, hasTypes)
@@ -130,14 +143,15 @@ export default function aintaArray(
     return result
         ? buildResultPrefix(options.begin, identifier, 'An array ') + result
 
-        // Otherwise, check that every item conforms to `options.types`, if set.
-        : validateEveryItem(value, length, options, hasTypes, identifier);
+        // Otherwise, check that every item conforms to `options`.
+        : validateEveryItem(value, length, options, hasIs, hasTypes, identifier);
 }
 
-function validateEveryItem(value, length, options, hasTypes, identifier) {
-    const { begin, pass, types } = options;
+function validateEveryItem(value, length, options, hasIs, hasTypes, identifier) {
+    const { begin, is, pass, types } = options;
 
     // If no types are defined, the item can be any type, or even `undefined`.
+    // Note that `validateArrayOption()` will already have failed an empty `is`.
     const definesTypes = hasTypes && types.length;
 
     // Step through each item in the `value` array.
@@ -147,8 +161,22 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
         const type = typeof item;
         const SQI = '[' + i + ']';
 
-        // If the item's type is not included in `options.types`, return an
-        // explanation of the problem.
+        // If the item is in `options.is` (or is an instance of a class in `is`),
+        // then it's valid, and any `options.types` checks can be skipped.
+        if (hasIs && containsOrContainsTheClassOf(is, item)) continue;
+
+        // If the item did not just validate because of `options.is`, and no
+        // `options.types` have been defined, then it's invalid.
+        if (hasIs && !definesTypes) {
+            return buildResultPrefix(
+                begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + IS_NOT_IN + _BT_OPT_IS_BT_ + saqArray(is);
+        }
+
+        // If the item's type is not one of `options.is`, and is not included
+        // in `options.types`, return an explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
             return buildResultPrefix(
                 begin,
@@ -231,6 +259,17 @@ export function aintaArrayTest(f) {
         try { throw Error() } catch(err) { throw Error(`actual:\n${actual}\n` +
             `!== expected:\n${expected}\n...at ${e2l(err)}\n`) } };
 
+    // Invalid `options.is` produces a helpful result.
+    equal(f([1], 'one', { begin:'Is', is:null }),
+        "Is: `one` cannot be validated, `options.is` is null not an array");
+    // @ts-expect-error
+    equal(f([2], undefined, { is:{} }),
+        "An array cannot be validated, `options.is` is type 'object' not an array");
+    equal(f([3], 'three', { is:[] }),
+        "`three` cannot be validated, `options.is` is empty");
+    equal(f([4], 'four', { is:[true,'123'] }), // `options.is` is valid, because `mustContain` is `[]`
+        "`four[0]` is not in `options.is` 'true:123'");
+
     // Invalid `options.least` produces a helpful result.
     equal(f([1], 'one', { begin:'Least', least:null }),
         "Least: `one` cannot be validated, `options.least` is null not type 'number'");
@@ -310,7 +349,7 @@ export function aintaArrayTest(f) {
     equal(f([6], 'six', { types:['string','bigint','Number','undefined'] }),
         "`six` cannot be validated, `options.types[2]` 'Number' not known");
 
-    // Typical usage without `options.least`, `.most`, `.pass` or `.types`.
+    // Typical usage without `options.is`, `.least`, `.most`, `.pass` or `.types`.
     equal(f([]),
         false);
     equal(f([1, 2, 3], void 0, { begin:'Array Test' }),
@@ -329,6 +368,48 @@ export function aintaArrayTest(f) {
         "`pseudo-array` is type 'object' not an array");
     equal(f(123, void 0, { type:'number' }),
         "A value is type 'number' not an array");
+
+    // Typical `options.is` boolean usage.
+    equal(f([true], null, { is:[3,'false',true] }),
+        false);
+    equal(f([false], null, { is:[3,'false',true] }),
+        "`[0] of an array` is not in `options.is` '3:false:true'"); // @TODO it's unclear what the problem really is - improve readability
+    equal(f([false], 'negatory', { is:[false] }),
+        false);
+    equal(f([true,'false',true,false], 'negatory', { is:[true,'false'] }),
+        "`negatory[3]` is not in `options.is` 'true:false'"); // @TODO it's unclear what the problem really is - improve readability
+    equal(f([1,true], 'repeat values', { begin:'Array of booleans Test', is:[1,true,true] }),
+        false);
+    equal(f([1,false], 'repeat values', { begin:'Array of booleans Test', is:[1,true,true] }),
+        "Array of booleans Test: `repeat values[1]` is not in `options.is` '1:true:true'");
+    equal(f([true], null, { begin:'neverFails()', is:[true,false]}),
+        false);
+    equal(f([false], null, { begin:'neverFails()', is:[true,false]}),
+        false);
+    equal(f([true], 'too_many_items_to_log', { is:Array(10).fill(0).map(_=>false) }),
+        "`too_many_items_to_log[0]` is not in `options.is` 'false:false:false:fal...se:false'");
+
+    // @TODO Typical `options.is` function usage.
+    // @TODO Typical `options.is` null usage.
+    // @TODO Typical `options.is` number usage.
+    // @TODO Typical `options.is` string usage.
+
+    // Typical `options.is` object usage.
+    class Foo { constructor(n) { this.n = n } }
+    const foo = new Foo();
+    equal(f([new Foo(3)], null, { is:[3,'2',true,Foo], open:true }),
+        false);
+    equal(f([{n:2}], null, { is:[3,'2',true,void 0,Foo], open:true }),
+        "`[0] of an array` is not in `options.is` '3:2:true:undefined:Foo'");
+    equal(f([new Promise(()=>{})], 'new Promise()', { is:[Foo,{},Promise,null] }),
+        false);
+    equal(f([{n:4}], 'new Promise()', { is:[Foo,{},Promise,null] }),
+        "`new Promise()[0]` is not in `options.is` 'Foo:Object:Promise:null'");
+    equal(f([foo], 'foo', { is:[foo], open:true }),
+        false);
+    equal(f([{n:2}], 'foo', { is:[foo], open:true }),
+        "`foo[0]` is not in `options.is` 'Foo'");
+    // @TODO more `options.is` object tests
 
     // Typical `options.least` usage.
     equal(f([1,2], null, { least:3 }),

@@ -137,10 +137,15 @@ export type Schema = {
  *
  * Else, if the array fails any of the following conditions, it also returns an
  * explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid items
  * - `options.least` - if set, there must be at least this number of items
  * - `options.most` - if set, there must not be more than this number of items
  * - `options.pass` - if set, each item is validated more deeply using `options`
  * - `options.types` - if set, all items must be one of these types
+ *
+ * If `options.is` and `.types` are both set, items are considered valid if they
+ * are either in `options.is`, or are one of the `options.types`.
+ * @TODO test that
  *
  * Otherwise, `aintaArray()` returns `false`.
  *
@@ -443,7 +448,7 @@ export function aintaObject(value: any, identifier?: string, options?: Options):
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  *
  * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
- * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
+ * // "A value 'Fum!' is not in `options.is` 'Fee:Fi:Fo'"
  *
  * @param {any} value
  *    The value to validate.

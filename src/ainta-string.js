@@ -1,11 +1,12 @@
 import aintaType from './ainta-type.js';
 import {
+    _BT_OPT_IS_BT_,
     _BT_OPTIONS_DOT,
     _IS_NOT_,
-    _IS_NOT_IN_,
+    _IS_NOT_IN,
     CANNOT_OPTIONS,
-    IS,
     FUNCTION,
+    IS,
     MAX,
     MIN,
     RX,
@@ -51,7 +52,7 @@ import emptyOptions from './options.js';
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  * 
  * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
- * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
+ * // "A value 'Fum!' is not in `options.is` 'Fee:Fi:Fo'"
  *
  * @param {any} value
  *    The value to validate.
@@ -98,7 +99,7 @@ export default function aintaString(
 
         // Check that `value` exists in the `options.is` array, if set.
         : hasIs && optionsIs.indexOf(value) == -1
-            ? saq(value) + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+            ? saq(value) + _IS_NOT_IN + _BT_OPT_IS_BT_ + saq(optionsIs.join(':'))
 
             // Check that `value` is not longer than `options.max`, if set.
             : hasMax && optionsMax < value.length
@@ -237,27 +238,27 @@ export function aintaStringTest(f) {
     equal(f('2', null, { is:[3,'2',true,()=>{}] }),
         false);
     equal(f('true', null, { is:[3,'2',true,()=>{}] }),
-        "A value 'true' is not in '3:2:true:()=%3E%7B%7D'"); // @TODO it's unclear what the problem really is - improve readability
+        "A value 'true' is not in `options.is` '3:2:true:()=%3E%7B%7D'"); // @TODO it's unclear what the problem really is - improve readability
     equal(f('', 'empty', { is:['Full',''] }),
         false);
     equal(f(' ', 'empty', { is:['Full',''] }),
-        "`empty` ' ' is not in 'Full:'");
+        "`empty` ' ' is not in `options.is` 'Full:'");
     equal(f('same', null, { begin:'String Test', is:['same','same'] }),
         false);
     equal(f('but different', null, { begin:'String Test', is:['same','same'] }),
-        "String Test: A value 'but different' is not in 'same:same'");
+        "String Test: A value 'but different' is not in `options.is` 'same:same'");
     equal(f('%', '0.01', { begin:'percent()', is:['%'] }),
         false);
     equal(f('1234567890'.repeat(5), '0.01', { begin:'percent()', is:['1 percent'] }),
-        "percent(): `0.01` '123456789012345678901...34567890' is not in '1 percent'");
-    equal(f('too many items to log', null, { is:Array(100).fill(0).map((_,i)=>i+'') }),
-        "A value 'too many items to log' is not in '0:1:2:3:4:5:6:7:8:9:1...97:98:99'");
-    equal(f('one item too long', null, { is:['1234567890'.repeat(5)] }),
-        "A value 'one item too long' is not in '123456789012345678901...34567890'");
+        "percent(): `0.01` '123456789012345678901...34567890' is not in `options.is` '1 percent'");
+    equal(f('too_many_items_to_log', null, { is:Array(100).fill(0).map((_,i)=>i+'') }),
+        "A value 'too_many_items_to_log' is not in `options.is` '0:1:2:3:4:5:6:7:8:9:1...97:98:99'");
+    equal(f('one_item_too_long', null, { is:['1234567890'.repeat(5)] }),
+        "A value 'one_item_too_long' is not in `options.is` '123456789012345678901...34567890'");
     equal(f('ascii pnc', null, { is:[' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'] }),
-        "A value 'ascii pnc' is not in ' !%22#$%25&'()*+,-./:;%3C=%3E...%5D%5E_%60%7B%7C%7D~'");
+        "A value 'ascii pnc' is not in `options.is` ' !%22#$%25&'()*+,-./:;%3C=%3E...%5D%5E_%60%7B%7C%7D~'");
     equal(f('ñóþë', null, { is:['⠁⠿⡀⣿','¡¦¾×ÿ'] }),
-        "A value '%C3%B1%C3%B3%C3%BE%C3%AB' is not in "
+        "A value '%C3%B1%C3%B3%C3%BE%C3%AB' is not in `options.is` "
         + "'%E2%A0%81%E2%A0%BF%E2%A1%80%E2%A3%BF:%C2%A1%C2%A6%C2%BE%C3%97%C3%BF'");
 
     // Typical `options.max` usage.
@@ -280,7 +281,7 @@ export function aintaStringTest(f) {
 
     // Using `options.is` and `options.max` together.
     equal(f('abcde', null, { is:['abc'], max:5 }),
-        "A value 'abcde' is not in 'abc'");
+        "A value 'abcde' is not in `options.is` 'abc'");
     equal(f('abcdef', null, { is:['abcdef'], max:5 }),
         "A value 'abcdef' is not max 5");
     equal(f('abc', null, { is:['abc'], max:5 }),
@@ -306,7 +307,7 @@ export function aintaStringTest(f) {
 
     // Using `options.is` and `options.min` together.
     equal(f('abcde', null, { is:['abc'], min:5 }),
-        "A value 'abcde' is not in 'abc'");
+        "A value 'abcde' is not in `options.is` 'abc'");
     equal(f('abc', null, { is:['abc'], min:5 }),
         "A value 'abc' is not min 5");
     equal(f('abcde', null, { is:['abcde'], min:5 }),
@@ -322,7 +323,7 @@ export function aintaStringTest(f) {
 
     // Using `options.is`, `.max` and `.min` together.
     equal(f('abcde', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
-        "A value 'abcde' is not in 'abcd:123456:xyz'");
+        "A value 'abcde' is not in `options.is` 'abcd:123456:xyz'");
     equal(f('123456', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
         "A value '123456' is not max 5");
     equal(f('xyz', null, { is:['abcd','123456','xyz'], max:5, min:4 }),
@@ -350,7 +351,7 @@ export function aintaStringTest(f) {
 
     // Using `options.is` and `options.rx` together.
     equal(f('abc', null, { is:['foo','bar','baz'], rx:/a/ }),
-        "A value 'abc' is not in 'foo:bar:baz'");
+        "A value 'abc' is not in `options.is` 'foo:bar:baz'");
     equal(f('foo', null, { is:['foo','bar','baz'], rx:/a/ }),
         "A value 'foo' fails /a/");
     equal(f('baz', null, { is:['foo','bar','baz'], rx:/a/ }),
@@ -384,7 +385,7 @@ export function aintaStringTest(f) {
 
     // Using `options.is`, `.max`, `.min` and `.rx` together.
     equal(f('abcde', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
-        "A value 'abcde' is not in 'abcd:----:123456:xyz'");
+        "A value 'abcde' is not in `options.is` 'abcd:----:123456:xyz'");
     equal(f('123456', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
         "A value '123456' is not max 5");
     equal(f('xyz', null, { is:['abcd','----','123456','xyz'], max:5, min:4, rx:/^[a-z]+$/ }),
@@ -426,7 +427,7 @@ export function aintaStringTest(f) {
     equal(f('', 'rx', { is:[''], rx:({}).nope }),
         false);
     equal(f('a', 'rx', { is:[''], rx:({}).nope }),
-        "`rx` 'a' is not in ''");
+        "`rx` 'a' is not in `options.is` ''");
 
     // Invalid `options.type` is a TS error, but does not prevent normal use.
     // @ts-expect-error

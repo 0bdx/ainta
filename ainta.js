@@ -99,8 +99,8 @@ const A_DICTIONARY = 'a dictionary';
 /** @constant {string} AN_OBJECT The literal string "an object" */
 const AN_OBJECT = AN_ + OBJECT;
 
-/** @constant {string} IN_ The literal string "in " */
-const IN_ = 'in ';
+/** @constant {string} IN The literal string "in" */
+const IN = 'in';
 
 /** @constant {string} IS_ The literal string "is " */
 const IS_ = IS + ' ';
@@ -119,6 +119,9 @@ const THE = 'the';
 
 /** @constant {string} _BT_OPTIONS_DOT The literal string " `options." */
 const _BT_OPTIONS_DOT = ' `options.';
+
+/** @constant {string} _BT_OPT_IS_BT_ The literal string "`options.is` " */
+const _BT_OPT_IS_BT_ = _BT_OPTIONS_DOT + IS + '` ';
 
 /** @constant {string} THE_BT_OPT_TYPES_BT_ The literal string "the `options.types` " */
 const THE_BT_OPT_TYPES_BT_ = THE + _BT_OPTIONS_DOT + TYPES + '` ';
@@ -147,11 +150,11 @@ const IS_NOT_ = IS + _NOT_;
 /** @constant {string} _IS_NOT_ The literal string " is not " */
 const _IS_NOT_ = ' ' + IS_NOT_;
 
-/** @constant {string} IS_NOT_IN_ The literal string "is not in " */
-const IS_NOT_IN_ = IS_NOT_ + IN_;
+/** @constant {string} IS_NOT_IN The literal string "is not in" */
+const IS_NOT_IN = IS_NOT_ + IN;
 
-/** @constant {string} _IS_NOT_IN_ The literal string " is not in " */
-const _IS_NOT_IN_ = _IS_NOT_ + IN_;
+/** @constant {string} _IS_NOT_IN The literal string " is not in" */
+const _IS_NOT_IN = _IS_NOT_ + IN;
 
 /** @constant {string} _NOT_AN_ARRAY The literal string " not an array" */
 const _NOT_AN_ARRAY = _NOT_ + AN_ + ARRAY;
@@ -364,7 +367,7 @@ function aintaNumber(
 
             // Check that `value` exists in the `options.is` array, if set.
             : hasIs && optionsIs.indexOf(value) == -1
-                ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+                ? IS_NOT_IN + _BT_OPT_IS_BT_ + saq(optionsIs.join(':'))
 
                 // Compare `value` with the 'Greater Than or Equal' option, if set.
                 : hasGte && optionsGte > value
@@ -454,14 +457,15 @@ function aintaObject(
     const hasOpen = optionsOpen !== void 0;
     const optionsSchema = options.schema;
     const hasSchema = optionsSchema !== void 0;
-    result = validateArrayOption(IS, optionsIs, hasIs, [OBJECT,FUNCTION])
+    result =
+        validateArrayOption(IS, optionsIs, hasIs, [OBJECT,FUNCTION])
      || validateBooleanOption(OPEN, optionsOpen, hasOpen)
      || validateSchemaOption(optionsSchema, hasSchema)
 
     // Check that `options.is`, if set, contains a class which `value` is an
     // instance of.
      || (hasIs && !containsOrContainsTheClassOf(optionsIs, value)
-        ? IS_NOT_IN_ + saqArray(optionsIs)
+        ? IS_NOT_IN + _BT_OPT_IS_BT_ + saqArray(optionsIs)
         : ''
     );
 
@@ -504,7 +508,7 @@ function aintaObject(
  * // "fly(): `redBalloons` is type 'number' not 'string'"
  * 
  * equal(f('Fum!', null, { is:['Fee','Fi','Fo'] }),
- * // "A value 'Fum!' is not in 'Fee:Fi:Fo'"
+ * // "A value 'Fum!' is not in `options.is` 'Fee:Fi:Fo'"
  *
  * @param {any} value
  *    The value to validate.
@@ -551,7 +555,7 @@ function aintaString(
 
         // Check that `value` exists in the `options.is` array, if set.
         : hasIs && optionsIs.indexOf(value) == -1
-            ? saq(value) + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+            ? saq(value) + _IS_NOT_IN + _BT_OPT_IS_BT_ + saq(optionsIs.join(':'))
 
             // Check that `value` is not longer than `options.max`, if set.
             : hasMax && optionsMax < value.length
@@ -601,23 +605,24 @@ const buildResultPrefix = (begin, identifier, unidentified) => {
     return (begin ? begin + ': ' : '') + ident;
 };
 
-/** ### Checks that `items` contains `value`, or the `value` class.
+/** ### Checks that an array contains a value, or the class of that value.
  *
  * @private
  * @param {any[]} items
  *    Can contain anything, but `containsOrContainsTheClassOf()` is only 
  *    interested in functions (or more precisely classes), and objects.
- * @param {object} instance
+ * @param {object} value
  *    The object to check.
  * @returns {boolean}
- *    Returns `true` if `items` contains a class which `value` is an instance of.
+ *    Returns `true` if an item strict-equals `value`, or if an item is the
+ *    class which `value` is an instance of.
  */
-const containsOrContainsTheClassOf = (items, instance) => {
+const containsOrContainsTheClassOf = (items, value) => {
     for (let i=0, len=items.length; i<len; i++) {
         const item = items[i];
         if (
-            instance === item
-          || (typeof item === FUNCTION && instance instanceof item)
+            value === item
+          || (typeof item === FUNCTION && value instanceof item)
         ) return true;
     }
     return false;
@@ -1080,7 +1085,8 @@ const validateArrayOfTypesOption = (key, val, has) => {
  * @param {boolean} has
  *    Whether the option exists in the `options` object.
  * @param {('boolean'|'function'|'number'|'object'|'string')[]} mustContain
- *    The array must contain at least one item of these types to be valid.
+ *    `val` must contain at least one item of these types to be valid.
+ *    - If `mustContain` is empty, `val` can contain anything
  * @returns {undefined|string}
  *    Returns `undefined` if `val` is valid, or an explanation if not.
  */
@@ -1094,8 +1100,9 @@ const validateArrayOption = (key, val, has, mustContain) => {
                     ? 'is empty'
                     : '';
         if (result) return CANNOT_OPTIONS + key + '` ' + result;
-        let doesContain = false;
         const mustContainLen = mustContain.length;
+        if (!mustContainLen) return;
+        let doesContain = false;
         if (mustContainLen === 1) {
             for (let i=0, l=val.length; i<l; i++) {
                 const type = typeof val[i];
@@ -1494,10 +1501,15 @@ function aintaFunction(
  *
  * Else, if the array fails any of the following conditions, it also returns an
  * explanation of what went wrong:
+ * - `options.is` - if set, this is an array containing valid items
  * - `options.least` - if set, there must be at least this number of items
  * - `options.most` - if set, there must not be more than this number of items
  * - `options.pass` - if set, each item is validated more deeply using `options`
  * - `options.types` - if set, all items must be one of these types
+ * 
+ * If `options.is` and `.types` are both set, items are considered valid if they
+ * are either in `options.is`, or are one of the `options.types`.
+ * @TODO test that
  * 
  * Otherwise, `aintaArray()` returns `false`.
  * 
@@ -1541,10 +1553,12 @@ function aintaArray(
     // Will probably be needed several times, below.
     const length = value.length;
 
-    // If `options.least`, `.most`, `.pass` or `.types` are invalid, return a
-    // helpful result. Note that setting these to `undefined` may be useful in
-    // some cases, so that `{ most:undefined }` acts the same way as `{}`, which
-    // is why we use `options.most !== void 0` instead of `"most" in options`.
+    // If any of the `options` properties are invalid, return a helpful result.
+    // Note that setting these to `undefined` may be useful in some cases, so
+    // that `{ is:undefined }` acts the same way as `{}`, which is why we use
+    // `options.is !== void 0` instead of `"is" in options`.
+    const optionsIs = options.is;
+    const hasIs = optionsIs !== void 0;
     const optionsLeast = options.least;
     const hasLeast = optionsLeast !== void 0;
     const optionsMost = options.most;
@@ -1554,7 +1568,8 @@ function aintaArray(
     const optionsTypes = options.types;
     const hasTypes = optionsTypes !== void 0;
     const result =
-        validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
+        validateArrayOption(IS, optionsIs, hasIs, [])
+     || validateNumericOption(LEAST, optionsLeast, hasLeast, false, true)
      || validateNumericOption(MOST, optionsMost, hasMost, false, true)
      || validateBooleanOption(PASS, optionsPass, hasPass)
      || validateArrayOfTypesOption(TYPES, optionsTypes, hasTypes)
@@ -1578,14 +1593,15 @@ function aintaArray(
     return result
         ? buildResultPrefix(options.begin, identifier, 'An array ') + result
 
-        // Otherwise, check that every item conforms to `options.types`, if set.
-        : validateEveryItem(value, length, options, hasTypes, identifier);
+        // Otherwise, check that every item conforms to `options`.
+        : validateEveryItem(value, length, options, hasIs, hasTypes, identifier);
 }
 
-function validateEveryItem(value, length, options, hasTypes, identifier) {
-    const { begin, pass, types } = options;
+function validateEveryItem(value, length, options, hasIs, hasTypes, identifier) {
+    const { begin, is, pass, types } = options;
 
     // If no types are defined, the item can be any type, or even `undefined`.
+    // Note that `validateArrayOption()` will already have failed an empty `is`.
     const definesTypes = hasTypes && types.length;
 
     // Step through each item in the `value` array.
@@ -1595,8 +1611,22 @@ function validateEveryItem(value, length, options, hasTypes, identifier) {
         const type = typeof item;
         const SQI = '[' + i + ']';
 
-        // If the item's type is not included in `options.types`, return an
-        // explanation of the problem.
+        // If the item is in `options.is` (or is an instance of a class in `is`),
+        // then it's valid, and any `options.types` checks can be skipped.
+        if (hasIs && containsOrContainsTheClassOf(is, item)) continue;
+
+        // If the item did not just validate because of `options.is`, and no
+        // `options.types` have been defined, then it's invalid.
+        if (hasIs && !definesTypes) {
+            return buildResultPrefix(
+                begin,
+                identifier && identifier + SQI,
+                '`' + SQI + _OF_ + AN_ARRAY + '` '
+            ) + IS_NOT_IN + _BT_OPT_IS_BT_ + saqArray(is);
+        }
+
+        // If the item's type is not one of `options.is`, and is not included
+        // in `options.types`, return an explanation of the problem.
         if (definesTypes && types.indexOf(type) === -1) {
             return buildResultPrefix(
                 begin,
@@ -1720,7 +1750,7 @@ function aintaBoolean(
 
     // Check that `value` exists in the `options.is` array, if set.
      || (hasIs && optionsIs.indexOf(value) == -1
-        ? value + _IS_NOT_IN_ + saq(optionsIs.join(':'))
+        ? IS_NOT_IN + _BT_OPT_IS_BT_ + saq(optionsIs.join(':'))
         : ''
     );
 
