@@ -517,7 +517,7 @@ export function aintaType(value: any, identifier?: string, options?: Options): f
  * 2. Aggregates the strings returned by those functions
  *
  * In the example below, `narrowAintas()` is used to narrow `aintaInteger()`
- * into `naInteger()`, and then capture its validation results:
+ * into `aInteger()`, and then capture its validation results:
  * - `begin:'bothNatural()'` sets a prefix, added to all explanations
  * - `gte:0` checks that the value is not negative
  * - `lte:1000` and `lte:50` specify different maximum values for each argument
@@ -527,14 +527,14 @@ export function aintaType(value: any, identifier?: string, options?: Options): f
  * import narrowAintas, { aintaInteger } from '@0bdx/ainta';
  *
  * function bothNatural(a, b) {
- *     const [ results, naInteger ] = narrowAintas(
+ *     const [ results, aInteger ] = narrowAintas(
  *         { begin:'bothNatural()', gte:0 },
  *         aintaInteger
  *     );
- *     naInteger(a, 'a', { lte:1000 });
- *     naInteger(b, 'b', { lte:50 });
+ *     aInteger(a, 'a', { lte:1000 });
+ *     aInteger(b, 'b', { lte:50 });
  *     if (results.length) return results;
- *     return "a and b are both natural numbers, in range!";
+ *     return "`a` and `b` are both natural numbers, in range!";
  * }
  *
  * bothNatural(-5, 0.25);
@@ -545,15 +545,16 @@ export function aintaType(value: any, identifier?: string, options?: Options): f
  * // [ "bothNatural(): `b` is 200 not lte 50" ]
  *
  * bothNatural(12, 3);
- * // "a and b are both natural numbers, in range!"
+ * // "`a` and `b` are both natural numbers, in range!"
  *
  * @param {Options} [options={}]
  *    The standard `ainta` configuration object (optional, defaults to `{}`).
- * @param {...Ainta} aintas
+ * @param {...(Ainta|Ainta[])} aintas
  *    Any number of `ainta` functions, to apply `options` to.
+ *    - An array of `ainta` functions is treated as an 'OR' list
  * @returns {[string[], ...Ainta[]]}
  *    The first item of the returned array will contain aggregated results. The
  *    remaining items are the passed-in functions, with `options` applied.
  */
-declare function narrowAintas(options?: Options, ...aintas: Ainta[]): [string[], ...Ainta[]];
+declare function narrowAintas(options?: Options, ...aintas: (Ainta | Ainta[])[]): [string[], ...Ainta[]];
 export { narrowAintas as default };
