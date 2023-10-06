@@ -1,7 +1,7 @@
 {
   "name": "@0bdx/ainta",
-  "version": "0.0.19",
-  "description": "Utilities for validating values in 0bdx apps, libraries and websites.",
+  "version": "0.0.20",
+  "description": "Utilities for validating values in apps, libraries and websites.",
   "type": "module",
   "files": [
     "ainta.d.ts",
@@ -39,7 +39,7 @@
   "homepage": "https://github.com/0bdx/ainta#readme",
   "devDependencies": {
     "@0bdx/build-helpers": "^0.0.4",
-    "@rollup/plugin-terser": "^0.4.0",
-    "rollup": "^3.18.0"
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.0.0"
   }
 }
